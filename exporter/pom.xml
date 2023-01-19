@@ -1,0 +1,183 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <name>Zeebe Redis Exporter</name>
+    <artifactId>zeebe-redis-exporter</artifactId>
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>io.zeebe.redis</groupId>
+        <artifactId>root</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>io.camunda</groupId>
+            <artifactId>zeebe-exporter-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>io.zeebe</groupId>
+            <artifactId>zeebe-exporter-protobuf</artifactId>
+        </dependency>
+
+        <!-- Redis Java Client https://lettuce.io/ -->
+        <dependency>
+            <groupId>io.lettuce</groupId>
+            <artifactId>lettuce-core</artifactId>
+            <!--
+            <exclusions>
+                <exclusion>
+                    <groupId>io.netty</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+            -->
+        </dependency>
+        <!-- io.netty currently removed from assembled jar
+             in order to not interfere with Zeebe
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec</artifactId>
+            <version>4.1.86.Final</version>
+            <scope>provided</scope>
+        </dependency>
+         -->
+
+        <!-- test -->
+        <dependency>
+            <groupId>io.camunda</groupId>
+            <artifactId>zeebe-client-java</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.zeebe</groupId>
+            <artifactId>zeebe-test-container</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>assembly-jar-with-dependencies.xml</descriptor>
+                    </descriptors>
+                    <outputDirectory>${project.build.directory}</outputDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>assemble-all</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>assemble-for-jib</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/jib</outputDirectory>
+                            <finalName>${project.artifactId}</finalName>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>docker-local</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>dockerBuild</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <from>
+                        <image>docker.io/camunda/zeebe:${version.zeebe}</image>
+                    </from>
+                    <to>
+                        <image>ghcr.io/camunda-community-hub/zeebe-with-redis-exporter</image>
+                        <tags>
+                            <tag>${version.zeebe}-${project.version}</tag>
+                            <tag>${version.zeebe}</tag>
+                        </tags>
+                    </to>
+                    <container>
+                        <entrypoint>INHERIT</entrypoint>
+                        <ports>
+                            <port>26500</port>
+                            <port>9600</port>
+                        </ports>
+                        <environment>
+                            <ZEEBE_BROKER_EXPORTERS_REDIS_CLASSNAME>io.zeebe.redis.exporter.RedisExporter
+                            </ZEEBE_BROKER_EXPORTERS_REDIS_CLASSNAME>
+                            <ZEEBE_BROKER_EXPORTERS_REDIS_JARPATH>
+                                exporters/zeebe-redis-exporter-jar-with-dependencies.jar
+                            </ZEEBE_BROKER_EXPORTERS_REDIS_JARPATH>
+                        </environment>
+                    </container>
+                    <extraDirectories>
+                        <paths>
+                            <path>
+                                <from>${project.build.directory}/jib</from>
+                                <into>/usr/local/zeebe/exporters</into>
+                            </path>
+                        </paths>
+                    </extraDirectories>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

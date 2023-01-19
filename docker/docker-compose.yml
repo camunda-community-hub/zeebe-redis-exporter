@@ -1,0 +1,27 @@
+version: "2"
+
+networks:
+  zeebe_network:
+    driver: bridge
+
+services:
+  zeebe:
+    container_name: zeebe_broker
+    image: camunda/zeebe:8.1.6
+    environment:
+      - ZEEBE_LOG_LEVEL=debug
+    ports:
+      - "26500:26500"
+      - "9600:9600"
+    volumes:
+      - ../exporter/target/jib/zeebe-redis-exporter-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter-jar-with-dependencies.jar
+      - ./application.yaml:/usr/local/zeebe/config/application.yaml
+    networks:
+      - zeebe_network
+  redis:
+    container_name: redis_cache
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - zeebe_network

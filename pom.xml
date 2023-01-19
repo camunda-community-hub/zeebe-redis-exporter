@@ -1,0 +1,234 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <name>Zeebe Redis Root</name>
+    <groupId>io.zeebe.redis</groupId>
+    <artifactId>root</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <parent>
+        <groupId>org.camunda</groupId>
+        <artifactId>camunda-release-parent</artifactId>
+        <version>3.9.1</version>
+        <!-- do not remove empty tag - http://jira.codehaus.org/browse/MNG-4687 -->
+        <relativePath />
+    </parent>
+
+    <properties>
+        <version.zeebe>8.1.5</version.zeebe>
+        <version.exporter.protobuf>1.2.1</version.exporter.protobuf>
+        <version.letuce>6.2.2.RELEASE</version.letuce>
+        <version.log4j>2.19.0</version.log4j>
+        <version.zeebe.testcontainers>3.5.2</version.zeebe.testcontainers>
+        <version.junit>5.9.1</version.junit>
+        <version.testcontainers>1.17.6</version.testcontainers>
+
+        <plugin.version.maven-jar>3.3.0</plugin.version.maven-jar>
+
+        <!-- release parent settings -->
+        <version.java>11</version.java>
+        <nexus.snapshot.repository>https://artifacts.camunda.com/artifactory/zeebe-io-snapshots/
+        </nexus.snapshot.repository>
+        <nexus.release.repository>https://artifacts.camunda.com/artifactory/zeebe-io/
+        </nexus.release.repository>
+
+        <!-- disable jdk8 javadoc checks on release build -->
+        <additionalparam>-Xdoclint:none</additionalparam>
+    </properties>
+
+    <modules>
+        <module>exporter</module>
+        <module>connector-java</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>io.zeebe.redis</groupId>
+                <artifactId>zeebe-redis-exporter</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.zeebe</groupId>
+                <artifactId>zeebe-exporter-protobuf</artifactId>
+                <version>${version.exporter.protobuf}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.camunda</groupId>
+                <artifactId>zeebe-bom</artifactId>
+                <version>${version.zeebe}</version>
+                <scope>import</scope>
+                <type>pom</type>
+            </dependency>
+
+            <!-- Redis Java Client https://lettuce.io/ -->
+            <dependency>
+                <groupId>io.lettuce</groupId>
+                <artifactId>lettuce-core</artifactId>
+                <version>${version.letuce}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>io.zeebe</groupId>
+                <artifactId>zeebe-test-container</artifactId>
+                <version>${version.zeebe.testcontainers}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${version.junit}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${version.testcontainers}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+
+
+            <dependency>
+                <groupId>org.assertj</groupId>
+                <artifactId>assertj-core</artifactId>
+                <version>3.23.1</version>
+                <scope>test</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-slf4j-impl</artifactId>
+                <version>${version.log4j}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>${version.log4j}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>4.2.0</version>
+            </dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M7</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>${plugin.version.maven-jar}</version>
+                <configuration>
+                    <useDefaultManifestFile>false</useDefaultManifestFile>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.10.1</version>
+                <configuration>
+                    <release>11</release>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <!-- Override java source version to workaround javadoc bug https://bugs.openjdk.java.net/browse/JDK-8212233 -->
+                    <source>8</source>
+                </configuration>
+            </plugin>
+        </plugins>
+
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.sonatype.plugins</groupId>
+                    <artifactId>nexus-staging-maven-plugin</artifactId>
+                    <version>1.6.13</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>community-action-maven-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.0.1</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <!-- Prevent gpg from using pinentry programs -->
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <repositories>
+        <repository>
+            <id>zeebe</id>
+            <name>Zeebe Repository</name>
+            <url>https://artifacts.camunda.com/artifactory/zeebe-io/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+
+        <repository>
+            <id>zeebe-snapshots</id>
+            <name>Zeebe Snapshot Repository</name>
+            <url>https://artifacts.camunda.com/artifactory/zeebe-io-snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <scm>
+        <url>https://github.com/camunda-community-hub/zeebe-redis-exporter</url>
+        <connection>scm:git:git@github.com:camunda-community-hub/zeebe-redis-exporter.git</connection>
+        <developerConnection>scm:git:git@github.com:camunda-community-hub/zeebe-redis-exporter.git
+        </developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
+</project>
