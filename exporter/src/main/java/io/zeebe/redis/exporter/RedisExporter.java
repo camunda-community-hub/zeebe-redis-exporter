@@ -107,12 +107,11 @@ public class RedisExporter implements Exporter {
       final var messageId = redisConnection.async()
               .xadd(stream, Long.toString(now), transformedRecord);
       messageId.thenRun(() -> {
-        controller.updateLastExportedRecordPosition(record.getPosition());
         streams.put(stream, Boolean.TRUE);
         logger.trace("Added a record with key {} to stream {}, messageId: {}", now, stream, messageId);
       });
     }
-
+    controller.updateLastExportedRecordPosition(record.getPosition());
   }
 
   private byte[] recordToProtobuf(Record record) {
