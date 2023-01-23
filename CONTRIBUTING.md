@@ -1,4 +1,4 @@
-# Contributing to Zeebe-Hazelcast-Exporter
+# Contributing to Zeebe-Redis-Exporter
 
 :tada: First off, thanks for taking the time to contribute! :+1:
 
@@ -7,13 +7,13 @@
 ### Reporting Bugs
 
 If you found a bug or an unexpected behevior then please create
-a [new issue](https://github.com/camunda-community-hub/zeebe-hazelcast-exporter/issues). Before creating an issue, make sure
+a [new issue](https://github.com/camunda-community-hub/zeebe-redis-exporter/issues). Before creating an issue, make sure
 that there is no issue yet. Any information you provide in the issue, helps to solve it.
 
 ### Suggesting Enhancements
 
 If you have an idea how to improve the project then please create
-a [new issue](https://github.com/camunda-community-hub/zeebe-hazelcast-exporter/issues). Describe your idea and the
+a [new issue](https://github.com/camunda-community-hub/zeebe-redis-exporter/issues). Describe your idea and the
 motivation behind it.
 
 Please note that this is a community-driven project. The maintainers may have not much time to implement new features if

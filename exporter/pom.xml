@@ -28,24 +28,7 @@
         <dependency>
             <groupId>io.lettuce</groupId>
             <artifactId>lettuce-core</artifactId>
-            <!--
-            <exclusions>
-                <exclusion>
-                    <groupId>io.netty</groupId>
-                    <artifactId>*</artifactId>
-                </exclusion>
-            </exclusions>
-            -->
         </dependency>
-        <!-- io.netty currently removed from assembled jar
-             in order to not interfere with Zeebe
-        <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-codec</artifactId>
-            <version>4.1.86.Final</version>
-            <scope>provided</scope>
-        </dependency>
-         -->
 
         <!-- test -->
         <dependency>

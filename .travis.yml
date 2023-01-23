@@ -1,8 +1,5 @@
 matrix:
   include:
-    - language: csharp
-      solution: connector-csharp/Connector.sln
-
     - language: java
       before_script:
         - cd exporter/
