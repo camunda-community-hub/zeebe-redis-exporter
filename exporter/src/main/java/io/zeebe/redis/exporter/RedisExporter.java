@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,6 +37,8 @@ public class RedisExporter implements Exporter {
   private Duration trimScheduleDelay;
 
   private String streamPrefix;
+
+  private HashMap<String, Long> positions = new HashMap<>();
 
   @Override
   public void configure(Context context) {
@@ -106,12 +109,17 @@ public class RedisExporter implements Exporter {
       final var transformedRecord = recordTransformer.apply(record);
       final var messageId = redisConnection.async()
               .xadd(stream, Long.toString(now), transformedRecord);
+      final var position = record.getPosition();
       messageId.thenRun(() -> {
+        controller.updateLastExportedRecordPosition(position);
         streams.put(stream, Boolean.TRUE);
-        logger.trace("Added a record with key {} to stream {}, messageId: {}", now, stream, messageId);
+        try {
+          logger.trace("Added a record with key {} to stream {}, messageId: {}", now, stream, messageId.get());
+        } catch (Exception ex) {
+          // NOOP: required catch from messageId.get()
+        }
       });
     }
-    controller.updateLastExportedRecordPosition(record.getPosition());
   }
 
   private byte[] recordToProtobuf(Record record) {
