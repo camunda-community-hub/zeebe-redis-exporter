@@ -1,92 +1,191 @@
 # zeebe-redis-exporter
 
+[![](https://img.shields.io/badge/Community%20Extension-An%20open%20source%20community%20maintained%20project-FF4700)](https://github.com/camunda-community-hub/community)
+[![](https://img.shields.io/badge/Lifecycle-Incubating-blue)](https://github.com/Camunda-Community-Hub/community/blob/main/extension-lifecycle.md#incubating-)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+[![Compatible with: Camunda Platform 8](https://img.shields.io/badge/Compatible%20with-Camunda%20Platform%208-0072Ce)](https://github.com/camunda-community-hub/community/blob/main/extension-lifecycle.md#compatiblilty)
 
-## Getting started
+Export records from [Zeebe](https://github.com/camunda-cloud/zeebe) to [Redis](https://redis.io/). Redis is an in-memory data store which is used as a transport layer.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+![How it works](how-it-works.png)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+The records are transformed into [Protobuf](https://github.com/camunda-community-hub/zeebe-exporter-protobuf) and added to a Redis Stream [Redis Streams](https://redis.io/docs/data-types/streams-tutorial/). The exporter provides a time based history cleanup for streamed data.
 
-## Add your files
+Multiple applications can read from such streams each using a unique consumer group. Scaling of consumers per consumer group can then be achieved by using a unique consumer ID. Separation of concerns is possible by reading from different streams.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.accso.de/von-der-beck/zeebe-redis-exporter.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.accso.de/von-der-beck/zeebe-redis-exporter/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+The Java connector provides a convenient way to read the records from Redis Streams.
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+### Java Application
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Add the Maven dependency to your `pom.xml`
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+```
+<dependency>
+	<groupId>io.zeebe.redis</groupId>
+	<artifactId>zeebe-redis-connector</artifactId>
+	<version>1.0.0-SNAPSHOT</version>
+</dependency>
+```
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Connect to Redis and register a listener
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+```java
+RedisClient redisClient = RedisClient.create("redis://localhost:6379");
+        
+final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
+        .consumerGroup("MyApplication").consumerId("consumer-1")
+        .addDeploymentListener(deployment -> { ... })
+        .addIncidentListener(incident -> { ... })
+        .addJobListener(job -> { ... })
+        .build();
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+// ...
 
-## License
-For open source projects, say how it is licensed.
+zeebeRedis.close();
+redisClient.shutdown();
+```
+## Install
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+### Docker
+
+A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
+
+```
+docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:1.1.2-1.0.1
+```
+
+For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter. The version of the exporter is defined in the `.env` file.
+
+```
+mvn clean install -DskipTests
+cd docker
+docker-compose up
+```
+
+### Manual
+
+1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) _(zeebe-distribution-%{VERSION}.tar.gz
+   )_
+
+1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-1.0.0-jar-with-dependencies.jar_)
+
+1. Copy the exporter JAR  into the broker folder `~/zeebe-broker-%{VERSION}/exporters`.
+
+    ```
+    cp exporter/target/zeebe-redis-exporter-1.0.0-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
+    ```
+
+1. Add the exporter to the broker configuration `~/zeebe-broker-%{VERSION}/config/application.yaml`:
+
+    ```
+    zeebe:
+      broker:  
+        exporters:
+          redis:
+            className: io.zeebe.redis.exporter.RedisExporter
+            jarPath: exporters/zeebe-redis-exporter-1.0.0-jar-with-dependencies.jar
+    ```
+
+1. Start the broker
+   `~/zeebe-broker-%{VERSION}/bin/broker`
+
+### Configuration
+
+In the Zeebe configuration file, you can change
+
+* the Redis remote address
+* the value and record types which are exported
+* the name resulting in a stream prefix
+* the time-to-live of exported records
+* the record serialization format
+
+Default values:
+
+```
+zeebe:
+  broker:
+    exporters:
+      redis:
+        className: io.zeebe.redis.exporter.RedisExporter
+        jarPath: exporters/zeebe-redis-exporter.jar
+	args:
+          # Redis connection url (redis://...)
+    	  remoteAddress = 
+   
+          # comma separated list of io.zeebe.protocol.record.ValueType to export or empty to export all types 
+          enabledValueTypes = ""
+    
+          # comma separated list of io.zeebe.protocol.record.RecordType to export or empty to export all types
+          enabledRecordTypes = ""
+        
+          # Redis Stream prefix
+          name = "zeebe"
+
+          # Redis stream data time-to-live in seconds. Default is 5 minutes. Set to zero in order to prevent cleanup.  
+          timeToLiveInSeconds = 300
+
+          # record serialization format: [protobuf|json]
+          format = "protobuf"
+```
+
+The values can be overridden by environment variables with the same name and a `ZEEBE_REDIS_` prefix (e.g. `ZEEBE_REDIS_REMOTE_ADDRESS`).
+
+<details>
+  <summary>Full docker-compose.yml with Redis</summary>
+  <p>
+
+```
+version: "2"
+
+networks:
+  zeebe_network:
+    driver: bridge
+
+services:
+  zeebe:
+    container_name: zeebe_broker
+    image: camunda/zeebe:8.1.6
+    environment:
+      - ZEEBE_LOG_LEVEL=debug
+      - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
+    ports:
+      - "26500:26500"
+      - "9600:9600"
+    volumes:
+      - ../exporter/target/zeebe-redis-exporter-1.0.0-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
+      - ./application.yaml:/usr/local/zeebe/config/application.yaml
+    networks:
+      - zeebe_network
+    depends_on:
+      - redis
+
+  redis:
+    container_name: redis_cache
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - zeebe_network
+
+```      
+
+</p>
+</details>
+
+Check out the Redis documentation on how to [manage](https://redis.io/docs/management/) Redis, configure persistence, run in a cluster, etc.
+
+## Build it from Source
+
+The exporter and the Java connector can be built with Maven
+
+`mvn clean install`
+
+## Code of Conduct
+
+This project adheres to the Contributor Covenant [Code of
+Conduct](/CODE_OF_CONDUCT.md). By participating, you are expected to uphold
+this code. Please report unacceptable behavior to
+code-of-conduct@zeebe.io.
