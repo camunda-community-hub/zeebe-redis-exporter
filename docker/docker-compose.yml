@@ -10,6 +10,8 @@ services:
     image: camunda/zeebe:8.1.6
     environment:
       - ZEEBE_LOG_LEVEL=debug
+      - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
+      - ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS=900
     ports:
       - "26500:26500"
       - "9600:9600"
@@ -18,6 +20,7 @@ services:
       - ./application.yaml:/usr/local/zeebe/config/application.yaml
     networks:
       - zeebe_network
+
   redis:
     container_name: redis_cache
     image: redis:7-alpine

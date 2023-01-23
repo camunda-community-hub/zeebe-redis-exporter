@@ -33,7 +33,7 @@ Add the Maven dependency to your `pom.xml`
 Connect to Redis and register a listener
 
 ```java
-RedisClient redisClient = RedisClient.create("redis://localhost:6379");
+final RedisClient redisClient = RedisClient.create("redis://localhost:6379");
         
 final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
         .consumerGroup("MyApplication").consumerId("consumer-1")
@@ -54,7 +54,7 @@ redisClient.shutdown();
 A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
-docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:1.1.2-1.0.1
+docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:1.0.0
 ```
 
 For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter. The version of the exporter is defined in the `.env` file.
@@ -62,12 +62,12 @@ For a local setup, the repository contains a [docker-compose file](docker/docker
 ```
 mvn clean install -DskipTests
 cd docker
-docker-compose up
+docker-compose up -d
 ```
 
 ### Manual
 
-1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) _(zeebe-distribution-%{VERSION}.tar.gz
+1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) _(camunda-zeebe-%{VERSION}.tar.gz
    )_
 
 1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-1.0.0-jar-with-dependencies.jar_)
@@ -89,14 +89,17 @@ docker-compose up
             jarPath: exporters/zeebe-redis-exporter-1.0.0-jar-with-dependencies.jar
     ```
 
+1. Set the environment variable `ZEEBE_REDIS_REMOTE_ADDRESS` to your Redis URL.
+
 1. Start the broker
    `~/zeebe-broker-%{VERSION}/bin/broker`
 
 ### Configuration
 
-In the Zeebe configuration file, you can change
+Setting the Redis remote address is mandatory.
 
-* the Redis remote address
+In the Zeebe configuration, you can furthermore change
+
 * the value and record types which are exported
 * the name resulting in a stream prefix
 * the time-to-live of exported records
@@ -111,27 +114,31 @@ zeebe:
       redis:
         className: io.zeebe.redis.exporter.RedisExporter
         jarPath: exporters/zeebe-redis-exporter.jar
-	args:
+        args:
           # Redis connection url (redis://...)
-    	  remoteAddress = 
+    	  # remoteAddress: 
    
           # comma separated list of io.zeebe.protocol.record.ValueType to export or empty to export all types 
-          enabledValueTypes = ""
+          enabledValueTypes: ""
     
           # comma separated list of io.zeebe.protocol.record.RecordType to export or empty to export all types
-          enabledRecordTypes = ""
+          enabledRecordTypes: ""
         
           # Redis Stream prefix
-          name = "zeebe"
+          name: "zeebe"
 
           # Redis stream data time-to-live in seconds. Default is 5 minutes. Set to zero in order to prevent cleanup.  
-          timeToLiveInSeconds = 300
+          timeToLiveInSeconds: 300
 
           # record serialization format: [protobuf|json]
-          format = "protobuf"
+          format: "protobuf"
 ```
 
-The values can be overridden by environment variables with the same name and a `ZEEBE_REDIS_` prefix (e.g. `ZEEBE_REDIS_REMOTE_ADDRESS`).
+The values can be overridden by environment variables with the same name and a `ZEEBE_REDIS_` prefix (e.g. `ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS`). 
+
+Especially when it comes to `ZEEBE_REDIS_REMOTE_ADDRESS` it is recommended to define it as environment variable
+and not within the more internal `application.yaml` configuration.
+
 
 <details>
   <summary>Full docker-compose.yml with Redis</summary>
@@ -175,7 +182,7 @@ services:
 </p>
 </details>
 
-Check out the Redis documentation on how to [manage](https://redis.io/docs/management/) Redis, configure persistence, run in a cluster, etc.
+Check out the Redis documentation on how to [manage](https://redis.io/docs/management/) Redis, configure optional persistence, run in a cluster, etc.
 
 ## Build it from Source
 
