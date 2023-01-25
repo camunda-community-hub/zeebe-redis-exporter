@@ -136,6 +136,10 @@ public class ZeebeRedis implements AutoCloseable {
       } catch (Exception closingFailure) {
         LOGGER.debug("Failure while closing the client", closingFailure);
       }
+    } catch (RedisCommandTimeoutException e) {
+      if (!isClosed) {
+        LOGGER.debug("Consumer[group={}, id={}] timed out reading from streams '{}*'", consumerGroup, consumerId, prefix);
+      }
     } catch (Exception e) {
       if (!isClosed) {
         LOGGER.error("Consumer[group={}, id={}] failed to read from streams '{}*'", consumerGroup, consumerId, prefix, e);
