@@ -16,6 +16,12 @@ Multiple applications can read from such streams each using a unique consumer gr
 
 The Java connector provides a convenient way to read the records from Redis Streams.
 
+## Hint
+
+This project is still in incubation phase. It works, but especially the Java connector may be subject to changes, for example with regard to topics such as error handling, restarting, etc. The topic of cleaning up the messages in Redis has also not yet been finally thought through.
+
+If you have any suggestions, please let us know - it's a community project.
+
 ## Usage
 
 ### Java Application
