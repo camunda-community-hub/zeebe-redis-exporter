@@ -15,6 +15,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           java-version: 17
+          distribution: zulu
           cache: maven
       - name: Run Maven
         run: mvn -B clean verify com.mycila:license-maven-plugin:check
