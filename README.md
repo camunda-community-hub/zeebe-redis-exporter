@@ -60,7 +60,7 @@ redisClient.shutdown();
 A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
-docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:0.9.0
+docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.1.6-0.9.0
 ```
 
 For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter. The version of the exporter is defined in the `.env` file.
