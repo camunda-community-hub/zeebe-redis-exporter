@@ -4,10 +4,7 @@ import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.model.bpmn.Bpmn;
 import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
 import io.camunda.zeebe.protocol.record.intent.DeploymentIntent;
-import io.lettuce.core.ClientOptions;
 import io.lettuce.core.RedisClient;
-import io.lettuce.core.SocketOptions;
-import io.lettuce.core.TimeoutOptions;
 import io.zeebe.exporter.proto.Schema;
 import io.zeebe.redis.connect.java.ProtobufCodec;
 import io.zeebe.redis.connect.java.ZeebeRedis;
@@ -51,13 +48,6 @@ public class ZeebeRedisClientTest {
     client = zeebeContainer.getClient();
 
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
-    redisClient.setOptions(ClientOptions.builder()
-                    .autoReconnect(true)
-                    .pingBeforeActivateConnection(true)
-                    .timeoutOptions(TimeoutOptions.builder()
-                            .fixedTimeout(Duration.ofMinutes(5))
-                            .build())
-            .build());
   }
 
   @AfterEach
