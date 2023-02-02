@@ -50,7 +50,7 @@ public class ExporterTest {
   }
 
   @AfterEach
-  public void cleanUp() throws Exception {
+  public void cleanUp() {
     if (zeebeRedis1 != null) zeebeRedis1.close();
     if (zeebeRedis2 != null) zeebeRedis2.close();
     redisClient.shutdown();

@@ -1,5 +1,6 @@
 package io.zeebe.redis.testcontainers;
 
+import org.testcontainers.Testcontainers;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.Network;
 
@@ -22,7 +23,7 @@ public class RedisContainer extends GenericContainer<RedisContainer> {
     protected void configure() {
         withNetwork(Network.SHARED);
         withNetworkAliases(ALIAS);
-        withExposedPorts(PORT);
+        addFixedExposedPort(PORT, PORT);
     }
 
     public String getRedisServerExternalAddress() {

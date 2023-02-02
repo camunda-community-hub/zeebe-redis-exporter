@@ -53,6 +53,33 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
 zeebeRedis.close();
 redisClient.shutdown();
 ```
+#### Dealing with unstable connections
+*Since 0.9.1*
+
+The Lettuce based Redis client itself is able to automatically reconnect to the Redis server once the connection is lost.
+However there are network setups, where Lettuce cannot recover from such problems. In order to deal with these situations
+there are optional configuration parameters forcing the connector to create a new connection upon reconnect attempts:
+
+```java
+final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
+        .withReconnectUsingNewConnection()
+        .reconnectInterval(Duration.ofSeconds(1))
+        ...
+```
+
+#### Immediate deletion of successful handled messages
+*Since 0.9.1*
+
+If you want to deactivate the general `timeToLiveInSeconds` setting of the exporter (see section "Configuration") and instead want
+to delete successful handled messages on client side the connector provides an optional setting:
+
+```java
+final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
+        .deleteMessagesAfterSuccessfulHandling(true)
+        ...
+```
+Hence the choice is yours. And of course you are able to combine both.
+
 ## Install
 
 ### Docker

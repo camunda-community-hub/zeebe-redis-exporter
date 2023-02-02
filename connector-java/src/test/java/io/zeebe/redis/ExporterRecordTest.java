@@ -99,13 +99,13 @@ public class ExporterRecordTest {
   }
 
   @AfterEach
-  public void cleanUp() throws Exception {
+  public void cleanUp() {
     zeebeRedis.close();
     redisClient.shutdown();
   }
 
   @Test
-  public void shouldExportRecords() throws Exception {
+  public void shouldExportRecords() {
     // given
     client
         .newDeployResourceCommand()
