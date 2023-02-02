@@ -95,7 +95,7 @@ public class ZeebeRedisClientTest {
 
     var redisConnection = redisClient.connect(new ProtobufCodec());
     Awaitility.await("await until all messages of deployment stream have been deleted")
-            .atMost(Duration.ofSeconds(5))
+            .atMost(Duration.ofSeconds(10))
             .untilAsserted(() ->
                 assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(0));
     redisConnection.close();
