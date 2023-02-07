@@ -112,6 +112,7 @@ public class ZeebeRedis implements AutoCloseable {
         }
       }
     });
+    externalClose = false;
     isClosed = false;
     executorService = Executors.newSingleThreadExecutor();
     future = executorService.submit(this::readFromStream);
@@ -219,7 +220,20 @@ public class ZeebeRedis implements AutoCloseable {
       if (!isClosed) {
         LOGGER.debug("Consumer[group={}, id={}] timed out reading from streams '{}*'", consumerGroup, consumerId, prefix);
       }
+    } catch (RedisCommandExecutionException e) {
+      // should not happen, but we want to recover anyway
+      if (!isClosed) {
+        LOGGER.error("Consumer[group={}, id={}] failed to read from streams '{}*': {}. Initiating reconnect.", consumerGroup, consumerId, prefix, e.getMessage());
+        try {
+          close();
+        } catch (Exception closingFailure) {
+          LOGGER.debug("Failure while closing the client", closingFailure);
+        }
+        reconnectExecutorService = Executors.newSingleThreadExecutor();
+        reconnectFuture = reconnectExecutorService.submit(ZeebeRedis.this::reconnect);
+      }
     } catch (Exception e) {
+      // TODO: should not happen, should we recover like above?
       if (!isClosed) {
         LOGGER.error("Consumer[group={}, id={}] failed to read from streams '{}*'", consumerGroup, consumerId, prefix, e);
       }
