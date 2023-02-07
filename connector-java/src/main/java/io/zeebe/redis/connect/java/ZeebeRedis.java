@@ -174,9 +174,7 @@ public class ZeebeRedis implements AutoCloseable {
       reconnectExecutorService.shutdown();
       reconnectExecutorService = null;
     }
-    if (redisConnection.isOpen()) {
-      redisConnection.close();
-    }
+    redisConnection.close();
   }
 
   private void readFromStream() {
