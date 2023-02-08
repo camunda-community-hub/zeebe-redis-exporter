@@ -131,9 +131,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>${plugin.version.maven-jar}</version>
-                <configuration>
-                    <useDefaultManifestFile>false</useDefaultManifestFile>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
