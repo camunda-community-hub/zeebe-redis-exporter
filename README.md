@@ -53,6 +53,20 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
 zeebeRedis.close();
 redisClient.shutdown();
 ```
+
+#### Dealing with Lettuce versions
+
+Under the hood the exporter and the connector uses Lettuce as Redis client.
+Please be aware that the connector requires `io.lettuce:lettuce-core:6.2.2.RELEASE`. In case your project uses a parent POM with lower and potentially incompatible versions you have to take care to deactivate them.
+E.g. do something like
+```
+  <properties>
+    <!-- unset lettuce version of spring boot starter parent -->
+    <lettuce.version></lettuce.version>
+  </properties>
+
+```
+
 #### Dealing with unstable connections
 *Since 0.9.1*
 
