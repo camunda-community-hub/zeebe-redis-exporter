@@ -149,7 +149,9 @@ In the Zeebe configuration, you can furthermore change
 
 * the value and record types which are exported
 * the name resulting in a stream prefix
-* the time-to-live of exported records
+* the cleanup cycle
+* the maximum time-to-live of exported records
+* a flag indicating whether to delete acknowledged messages
 * the record serialization format
 
 Default values:
@@ -174,18 +176,23 @@ zeebe:
           # Redis Stream prefix
           name: "zeebe"
 
-          # Redis stream data time-to-live in seconds. Default is 5 minutes. Set to zero in order to prevent cleanup.  
-          timeToLiveInSeconds: 300
+          # Redis stream data cleanup cycle time in seconds. Default is 1 minute. Set to -1 in order to disable cleanup.
+          cleanupCycleInSeconds: 60
+
+          # Redis stream data maximum time-to-live in seconds. Default is 5 minutes. Set to zero in order to prevent cleanup.  
+          maxTimeToLiveInSeconds: 300
+
+          # Redis stream automatic cleanup of acknowledged messages. Default is false.   
+          deleteAfterAcknowledge: false
 
           # record serialization format: [protobuf|json]
           format: "protobuf"
 ```
 
-The values can be overridden by environment variables with the same name and a `ZEEBE_REDIS_` prefix (e.g. `ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS`). 
+The values can be overridden by environment variables with the same name and a `ZEEBE_REDIS_` prefix (e.g. `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS`). 
 
 Especially when it comes to `ZEEBE_REDIS_REMOTE_ADDRESS` it is recommended to define it as environment variable
 and not within the more internal `application.yaml` configuration.
-
 
 <details>
   <summary>Full docker-compose.yml with Redis</summary>
@@ -230,6 +237,11 @@ services:
 </details>
 
 Check out the Redis documentation on how to [manage](https://redis.io/docs/management/) Redis, configure optional persistence, run in a cluster, etc.
+
+#### Cleanup
+*Since 0.9.3*
+
+TODO
 
 ## Build it from Source
 

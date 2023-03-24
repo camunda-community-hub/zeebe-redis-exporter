@@ -15,7 +15,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -70,7 +69,7 @@ public class ExporterRecordTest {
   private ZeebeRedis zeebeRedis;
 
   @Container
-  public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withTTLInSeconds(-1);
+  public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withMaxTTLInSeconds(-1);
 
   private RedisClient redisClient;
   @BeforeEach

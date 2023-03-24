@@ -2,7 +2,6 @@ package io.zeebe.redis.testcontainers;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import io.zeebe.containers.ZeebeContainer;
-import org.testcontainers.lifecycle.Startable;
 import org.testcontainers.utility.DockerImageName;
 
 public class ZeebeTestContainer extends ZeebeContainer {
@@ -26,10 +25,19 @@ public class ZeebeTestContainer extends ZeebeContainer {
         return container;
     }
 
-    public static ZeebeTestContainer withTTLInSeconds(long timeToLiveInSeconds) {
+    public ZeebeTestContainer withMaxTTLInSeconds(long maxTimeToLiveInSeconds) {
+        withEnv("ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS", Long.toString(maxTimeToLiveInSeconds));
+        return this;
+    }
+
+    public static ZeebeTestContainer withCleanupCycleInSeconds(long cleanupCycleInSeconds) {
         ZeebeTestContainer container = withDefaultConfig();
-        container.withEnv("ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS", Long.toString(timeToLiveInSeconds));
+        container.withEnv("ZEEBE_REDIS_CLEANUP_CYCLE_IN_SECONDS", Long.toString(cleanupCycleInSeconds));
         return container;
+    }
+    public ZeebeTestContainer doDeleteAfterAcknowledge(boolean deleteAfterAcknowledge) {
+        withEnv("ZEEBE_REDIS_DELETE_AFTER_ACKNOWLEDGE", Boolean.toString(deleteAfterAcknowledge));
+        return this;
     }
 
     public ZeebeClient getClient() {

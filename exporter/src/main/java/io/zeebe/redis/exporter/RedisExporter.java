@@ -12,10 +12,7 @@ import io.zeebe.exporter.proto.Schema;
 import org.slf4j.Logger;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
@@ -32,7 +29,9 @@ public class RedisExporter implements Exporter {
   private Map<String, Boolean> streams = new ConcurrentHashMap<>();
 
   private boolean useProtoBuf = false;
-  private long ttlInMillis = 0;
+  private long maxTtlInMillis = 0;
+  private long minTtlInMillis = 0;
+  private boolean deleteAfterAcknowledge = false;
 
   private Duration trimScheduleDelay;
 
@@ -45,10 +44,12 @@ public class RedisExporter implements Exporter {
     logger = context.getLogger();
     config = context.getConfiguration().instantiate(ExporterConfiguration.class);
 
-    logger.debug("Starting exporter with configuration: {}", config);
+    logger.info("Starting exporter with configuration: {}", config);
 
-    ttlInMillis = config.getTimeToLiveInSeconds() * 1000l;
-    trimScheduleDelay = Duration.ofSeconds(Math.min(60, config.getTimeToLiveInSeconds()));
+    minTtlInMillis = config.getMinTimeToLiveInSeconds() * 1000l;
+    maxTtlInMillis = config.getMaxTimeToLiveInSeconds() * 1000l;
+    deleteAfterAcknowledge = config.isDeleteAfterAcknowledge();
+    trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
     streamPrefix = config.getName() + ":";
 
     final var filter = new RecordFilter(config);
@@ -86,8 +87,8 @@ public class RedisExporter implements Exporter {
 
     logger.info("Successfully connected Redis exporter to {}", config.getRemoteAddress().get());
 
-    if (config.getTimeToLiveInSeconds() > 0) {
-      controller.scheduleCancellableTask(trimScheduleDelay, this::timeOutStreamValues);
+    if (config.getMaxTimeToLiveInSeconds() > 0 || config.getCleanupCycleInSeconds() < 0) {
+      controller.scheduleCancellableTask(trimScheduleDelay, this::trimStreamValues);
     }
   }
 
@@ -131,15 +132,36 @@ public class RedisExporter implements Exporter {
     return record.toJson();
   }
 
-  private void timeOutStreamValues() {
+  private void trimStreamValues() {
     if (streams.size() > 0) {
-      final var minId = String.valueOf(System.currentTimeMillis() - ttlInMillis);
-      logger.debug("trim streams {} with minId={}", streams, minId);
+      // minId according to max time to live
+      final var minIdMillis = System.currentTimeMillis() - maxTtlInMillis;
+      final var minId = String.valueOf(minIdMillis);
+      logger.debug("trim streams {}", streams);
       List<String> keys = new ArrayList(streams.keySet());
       keys.forEach(stream -> {
-        redisConnection.async().xtrim(stream, new XTrimArgs().minId(minId));
+        Optional<Long> minDelivered = !deleteAfterAcknowledge ? Optional.empty() :
+                redisConnection.sync().xinfoGroups(stream)
+                .stream().map(o -> XInfoGroup.fromXInfo(o, useProtoBuf))
+                .map(xi -> {
+                  if (xi.getPending() > 0) {
+                    xi.considerPendingMessageId(redisConnection.sync()
+                            .xpending(stream, xi.getName()).getMessageIds().getLower().getValue());
+                  }
+                  return xi.getLastDeliveredId();
+                })
+                .min(Comparator.comparing(Long::longValue));
+
+        if (minDelivered.isPresent()) {
+          var minDeliveredMillis = minDelivered.get();
+          redisConnection.async().xtrim(stream, new XTrimArgs()
+                  .minId(minIdMillis > minDeliveredMillis ? minId : String.valueOf(minDeliveredMillis)));
+        } else {
+          redisConnection.async().xtrim(stream, new XTrimArgs().minId(minId));
+        }
       });
     }
-    controller.scheduleCancellableTask(trimScheduleDelay, this::timeOutStreamValues);
+    controller.scheduleCancellableTask(trimScheduleDelay, this::trimStreamValues);
   }
+
 }

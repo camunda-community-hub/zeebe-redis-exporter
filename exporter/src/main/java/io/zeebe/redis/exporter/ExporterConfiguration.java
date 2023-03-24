@@ -7,8 +7,6 @@ public class ExporterConfiguration {
 
   private static final String ENV_PREFIX = "ZEEBE_REDIS_";
 
-  private long timeToLiveInSeconds = Duration.ofMinutes(5).toSeconds();
-
   private String format = "protobuf";
 
   private String enabledValueTypes = "";
@@ -18,8 +16,28 @@ public class ExporterConfiguration {
 
   private String remoteAddress;
 
-  public long getTimeToLiveInSeconds() {
-    return getEnv("TIME_TO_LIVE_IN_SECONDS").map(Long::parseLong).orElse(timeToLiveInSeconds);
+  private long cleanupCycleInSeconds = Duration.ofMinutes(1).toSeconds();
+
+  private long minTimeToLiveInSeconds = 0;
+
+  private long maxTimeToLiveInSeconds = Duration.ofMinutes(5).toSeconds();
+
+  private boolean deleteAfterAcknowledge = false;
+
+  public long getCleanupCycleInSeconds() {
+    return getEnv("CLEANUP_CYCLE_IN_SECONDS").map(Long::parseLong).orElse(cleanupCycleInSeconds);
+  }
+
+  public long getMinTimeToLiveInSeconds() {
+    return getEnv("MIN_TIME_TO_LIVE_IN_SECONDS").map(Long::parseLong).orElse(minTimeToLiveInSeconds);
+  }
+
+  public long getMaxTimeToLiveInSeconds() {
+    return getEnv("MAX_TIME_TO_LIVE_IN_SECONDS").map(Long::parseLong).orElse(maxTimeToLiveInSeconds);
+  }
+
+  public boolean isDeleteAfterAcknowledge() {
+    return getEnv("DELETE_AFTER_ACKNOWLEDGE").map(Boolean::parseBoolean).orElse(deleteAfterAcknowledge);
   }
 
   public String getFormat() {
@@ -50,18 +68,16 @@ public class ExporterConfiguration {
 
   @Override
   public String toString() {
-    return "[remoteAddress="
-        + getRemoteAddress()
-        + ", enabledValueTypes="
-        + getEnabledValueTypes()
-        + ", enabledRecordTypes="
-        + getEnabledRecordTypes()
-        + ", timeToLiveInSeconds="
-        + getTimeToLiveInSeconds()
-        + ", format="
-        + getFormat()
-        + ", name="
-        + getName()
-        + "]";
+    return "[" +
+            "remoteAddress='" + getRemoteAddress() + '\'' +
+            ", enabledValueTypes='" + getEnabledValueTypes() + '\'' +
+            ", enabledRecordTypes='" + getEnabledRecordTypes() + '\'' +
+            ", format='" + getFormat() + '\'' +
+            ", name='" + getName() + '\'' +
+            ", cleanupCycleInSeconds=" + getCleanupCycleInSeconds() +
+            ", minTimeToLiveInSeconds=" + getMinTimeToLiveInSeconds() +
+            ", maxTimeToLiveInSeconds=" + getMaxTimeToLiveInSeconds() +
+            ", deleteAfterAcknowledge=" + isDeleteAfterAcknowledge() +
+            ']';
   }
 }

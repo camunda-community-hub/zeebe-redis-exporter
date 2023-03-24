@@ -25,9 +25,9 @@ public class ZeebeTestContainer extends ZeebeContainer {
         return container;
     }
 
-    public static ZeebeTestContainer withTTLInSeconds(long timeToLiveInSeconds) {
+    public static ZeebeTestContainer withMaxTTLInSeconds(long maxTimeToLiveInSeconds) {
         ZeebeTestContainer container = withDefaultConfig();
-        container.withEnv("ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS", Long.toString(timeToLiveInSeconds));
+        container.withEnv("ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS", Long.toString(maxTimeToLiveInSeconds));
         return container;
     }
 

@@ -28,7 +28,8 @@ public class ExporterTimeToLiveTest {
           .done();
 
   @Container
-  public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withTTLInSeconds(4);
+  public ZeebeTestContainer zeebeContainer = ZeebeTestContainer
+          .withCleanupCycleInSeconds(3).withMaxTTLInSeconds(4);
 
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;
