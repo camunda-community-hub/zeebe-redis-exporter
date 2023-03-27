@@ -84,7 +84,7 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
 #### Immediate deletion of successful handled messages
 *Since 0.9.1*
 
-If you want to deactivate the general `timeToLiveInSeconds` setting of the exporter (see section "Configuration") and instead want
+If you want to deactivate the general cleanup of the exporter (see section "Configuration") and instead want
 to delete successful handled messages on client side the connector provides an optional setting:
 
 ```java
@@ -92,7 +92,11 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
         .deleteMessagesAfterSuccessfulHandling(true)
         ...
 ```
-Hence the choice is yours. And of course you are able to combine both.
+This will immediately delete messages after they have been acknowledged. Please be aware that this does not consider 
+foreign consumer groups! It might be a way to go in case you have exactly one consumer group.
+
+Of course it is possible to combine this simple client side mechanism with the exporter configuration.
+Hence the choice is yours.
 
 ## Install
 
@@ -150,6 +154,7 @@ In the Zeebe configuration, you can furthermore change
 * the value and record types which are exported
 * the name resulting in a stream prefix
 * the cleanup cycle
+* the minimum time-to-live of exported records
 * the maximum time-to-live of exported records
 * a flag indicating whether to delete acknowledged messages
 * the record serialization format
@@ -179,14 +184,14 @@ zeebe:
           # Redis stream data cleanup cycle time in seconds. Default is 1 minute. Set to 0 or -1 in order to completely disable cleanup.
           cleanupCycleInSeconds: 60
 
+          # Redis stream data minimum time-to-live in seconds. Default is 0 (disabled). Set to a value > 0 in order to keep acknowledged messages alive for a minimum time.  
+          minTimeToLiveInSeconds: 0
+
           # Redis stream data maximum time-to-live in seconds. Default is 5 minutes. Set to 0 or -1 in order to prevent max TTL cleanup.  
           maxTimeToLiveInSeconds: 300
 
           # Redis stream automatic cleanup of acknowledged messages. Default is false.   
           deleteAfterAcknowledge: false
-
-          # Redis stream data minimum time-to-live in seconds. Default is disabled. Set to a value > 0 in order to keep acknowledged messages in memory for a minimum time.  
-          minTimeToLiveInSeconds: 0
 
           # record serialization format: [protobuf|json]
           format: "protobuf"
@@ -242,9 +247,30 @@ services:
 Check out the Redis documentation on how to [manage](https://redis.io/docs/management/) Redis, configure optional persistence, run in a cluster, etc.
 
 #### Cleanup
+
 *Since 0.9.3*
 
-TODO
+The cleanup mechanism consists of the following options:
+
+| **Parameter**                              | **Description**                                                                                                                                     |
+|--------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ZEEBE_REDIS_CLEANUP_CYCLE_IN_SECONDS`     | General cleanup cycle. Default is `60` (1 minute). A value of zero or below will completely disable any cleanup.                                    |
+| `ZEEBE_REDIS_MIN_TIME_TO_LIVE_IN_SECONDS`  | The minimum time to live. Default is `0` (disabled). Set a value greater than zero in order to keep acknowledged messages alive for a minimum time. |
+| `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS`  | The maximum time to live. Default is `300` (5 minutes). A value of zero or below will prevent cleanup with max TTL.                                 |
+| `ZEEBE_REDIS_DELETE_AFTER_ACKNOWLEDGE`     | Whether to automatically delete acknowledged messages. Default value is `false` (disabled). Set to `true` in order to enable the feature.           |
+
+The maximum TTL configuration is a safety net to cleanup all messages after a certain timespan. This can be used alone or in combination with the "delete-after-acknowledge" feature.
+If combined not acknowledged messages will be deleted anyway after max TTL. In case you want to keep messages alive for a certain timespan despite they have already been acknowledged
+the min TTL configuration is at your hand.
+
+The "delete-after-acknowledge" feature is based on the Redis `xinfogroups` command returning a list of all consumer groups having consumed data together with their “last-delivered-id”. 
+If there are pending messages the algorithm will additionally consider the lowest ID of the Redis `xpending` command result in order to delete only acknowledged messages.
+Please be aware that messages must have been acknowledged by all known consumer groups in order to be cleaned up.
+
+*Version 0.9.2 and older*
+
+Version 0.9.2 comes with a single cleanup parameter `ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS`
+which is equal to the `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS` since version 0.9.3.
 
 ## Build it from Source
 
