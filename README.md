@@ -93,9 +93,12 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
         ...
 ```
 This will immediately delete messages after they have been acknowledged. Please be aware that this does not consider 
-foreign consumer groups! It might be a way to go in case you have exactly one consumer group.
+foreign consumer groups! And it will send an `xdel` command for each single received message. 
+This might be an option to choose in case you have exactly one consumer group and not a high load.
 
-Of course it is possible to combine this simple client side mechanism with the exporter configuration.
+Enhanced exporter side algorithms can be found in the exporter's configuration section.
+
+Of course it is possible to combine this simple client side mechanism with the exporter mechanism.
 Hence the choice is yours.
 
 ## Install
