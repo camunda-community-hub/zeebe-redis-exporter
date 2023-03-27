@@ -171,9 +171,9 @@ public class RedisExporter implements Exporter {
             } else if (minTtlInMillisConfig > 0 && minTTLMillis < minDeliveredMillis) {
               xtrimMinId = minTTLId;
             }
-            redisConnection.async().xtrim(stream, new XTrimArgs().minId(xtrimMinId));
+            redisConnection.sync().xtrim(stream, new XTrimArgs().minId(xtrimMinId));
           } else if (maxTtlInMillisConfig > 0) {
-            redisConnection.async().xtrim(stream, new XTrimArgs().minId(maxTTLId));
+            redisConnection.sync().xtrim(stream, new XTrimArgs().minId(maxTTLId));
           }
         });
       } catch (Exception ex) {
