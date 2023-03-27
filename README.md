@@ -270,6 +270,8 @@ The "delete-after-acknowledge" feature is based on the Redis `xinfogroups` comma
 If there are pending messages the algorithm will additionally consider the lowest ID of the Redis `xpending` command result in order to delete only acknowledged messages.
 Please be aware that messages must have been acknowledged by all known consumer groups in order to be cleaned up.
 
+TODO: the exporters cleanup is currently missing a synchronisation between the different Zeebe nodes. This is under development and planned for version 0.9.4.
+
 *Version 0.9.2 and older*
 
 Version 0.9.2 comes with a single cleanup parameter `ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS`
