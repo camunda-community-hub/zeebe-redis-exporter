@@ -176,14 +176,17 @@ zeebe:
           # Redis Stream prefix
           name: "zeebe"
 
-          # Redis stream data cleanup cycle time in seconds. Default is 1 minute. Set to -1 in order to disable cleanup.
+          # Redis stream data cleanup cycle time in seconds. Default is 1 minute. Set to 0 or -1 in order to completely disable cleanup.
           cleanupCycleInSeconds: 60
 
-          # Redis stream data maximum time-to-live in seconds. Default is 5 minutes. Set to zero in order to prevent cleanup.  
+          # Redis stream data maximum time-to-live in seconds. Default is 5 minutes. Set to 0 or -1 in order to prevent max TTL cleanup.  
           maxTimeToLiveInSeconds: 300
 
           # Redis stream automatic cleanup of acknowledged messages. Default is false.   
           deleteAfterAcknowledge: false
+
+          # Redis stream data minimum time-to-live in seconds. Default is disabled. Set to a value > 0 in order to keep acknowledged messages in memory for a minimum time.  
+          minTimeToLiveInSeconds: 0
 
           # record serialization format: [protobuf|json]
           format: "protobuf"

@@ -29,8 +29,8 @@ public class RedisExporter implements Exporter {
   private Map<String, Boolean> streams = new ConcurrentHashMap<>();
 
   private boolean useProtoBuf = false;
-  private long maxTtlInMillis = 0;
-  private long minTtlInMillis = 0;
+  private long maxTtlInMillisConfig = 0;
+  private long minTtlInMillisConfig = 0;
   private boolean deleteAfterAcknowledge = false;
 
   private Duration trimScheduleDelay;
@@ -46,8 +46,10 @@ public class RedisExporter implements Exporter {
 
     logger.info("Starting exporter with configuration: {}", config);
 
-    minTtlInMillis = config.getMinTimeToLiveInSeconds() * 1000l;
-    maxTtlInMillis = config.getMaxTimeToLiveInSeconds() * 1000l;
+    minTtlInMillisConfig = config.getMinTimeToLiveInSeconds() * 1000l;
+    if (minTtlInMillisConfig < 0) minTtlInMillisConfig = 0;
+    maxTtlInMillisConfig = config.getMaxTimeToLiveInSeconds() * 1000l;
+    if (maxTtlInMillisConfig < 0) maxTtlInMillisConfig = 0;
     deleteAfterAcknowledge = config.isDeleteAfterAcknowledge();
     trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
     streamPrefix = config.getName() + ":";
@@ -87,7 +89,8 @@ public class RedisExporter implements Exporter {
 
     logger.info("Successfully connected Redis exporter to {}", config.getRemoteAddress().get());
 
-    if (config.getMaxTimeToLiveInSeconds() > 0 || config.getCleanupCycleInSeconds() < 0) {
+    if (config.getCleanupCycleInSeconds() > 0 &&
+            (config.isDeleteAfterAcknowledge() || config.getMaxTimeToLiveInSeconds() > 0)) {
       controller.scheduleCancellableTask(trimScheduleDelay, this::trimStreamValues);
     }
   }
@@ -134,10 +137,14 @@ public class RedisExporter implements Exporter {
 
   private void trimStreamValues() {
     if (streams.size() > 0) {
-      // minId according to max time to live
-      final var minIdMillis = System.currentTimeMillis() - maxTtlInMillis;
-      final var minId = String.valueOf(minIdMillis);
+      // get ID according to max time to live
+      final var maxTTLMillis = System.currentTimeMillis() - maxTtlInMillisConfig;
+      final var maxTTLId = String.valueOf(maxTTLMillis);
+      // get ID according to min time to live
+      final var minTTLMillis = System.currentTimeMillis() - minTtlInMillisConfig;
+      final var minTTLId = String.valueOf(minTTLMillis);
       logger.debug("trim streams {}", streams);
+      // trim all streams
       List<String> keys = new ArrayList(streams.keySet());
       keys.forEach(stream -> {
         Optional<Long> minDelivered = !deleteAfterAcknowledge ? Optional.empty() :
@@ -151,13 +158,17 @@ public class RedisExporter implements Exporter {
                   return xi.getLastDeliveredId();
                 })
                 .min(Comparator.comparing(Long::longValue));
-
         if (minDelivered.isPresent()) {
           var minDeliveredMillis = minDelivered.get();
-          redisConnection.async().xtrim(stream, new XTrimArgs()
-                  .minId(minIdMillis > minDeliveredMillis ? minId : String.valueOf(minDeliveredMillis)));
-        } else {
-          redisConnection.async().xtrim(stream, new XTrimArgs().minId(minId));
+          String xtrimMinId = String.valueOf(minDeliveredMillis);
+          if (maxTtlInMillisConfig > 0 && maxTTLMillis > minDeliveredMillis) {
+            xtrimMinId = maxTTLId;
+          } else if (minTtlInMillisConfig > 0 && minTTLMillis < minDeliveredMillis){
+            xtrimMinId = minTTLId;
+           }
+          redisConnection.async().xtrim(stream, new XTrimArgs().minId(xtrimMinId));
+        } else if (maxTtlInMillisConfig > 0) {
+          redisConnection.async().xtrim(stream, new XTrimArgs().minId(maxTTLId));
         }
       });
     }
