@@ -17,12 +17,12 @@ public class XInfoGroup {
     }
 
     public static XInfoGroup fromXInfo(Object xinfoGroup, boolean useProtoBuf) {
-        var info = (ArrayList<Object>) xinfoGroup;
+        ArrayList<Object> info = (ArrayList<Object>) xinfoGroup;
         String name = null;
         String lastDeliveredId = null;
         String pending = null;
         for (int i = 0; i < info.size(); i++) {
-            var current = getValueAt(info, i, useProtoBuf);
+            String current = getValueAt(info, i, useProtoBuf);
             if ("name".equals(current)) {
                 name = getValueAt(info, i+1, useProtoBuf);
             } else if ("last-delivered-id".equals(current)) {
@@ -36,7 +36,7 @@ public class XInfoGroup {
     }
 
     private static String getValueAt(ArrayList<Object> list, int i, boolean useProtoBuf) {
-        var obj = list.get(i);
+        Object obj = list.get(i);
         if (useProtoBuf && obj instanceof byte[])
             return new String((byte[]) obj, charset);
         return String.valueOf(obj);
@@ -54,7 +54,7 @@ public class XInfoGroup {
 
     public void considerPendingMessageId(String pendingMessageId) {
         if (pendingMessageId == null) return;
-        var pendingMessageIdLongVal = getMessageIdAsLong(pendingMessageId);
+        long pendingMessageIdLongVal = getMessageIdAsLong(pendingMessageId);
         if (pendingMessageIdLongVal < lastDeliveredId || lastDeliveredId == 0) {
             lastDeliveredId = pendingMessageIdLongVal;
         }
@@ -70,7 +70,7 @@ public class XInfoGroup {
 
     private long getMessageIdAsLong(String messageId) {
         if (messageId == null) return 0;
-        var idx = messageId.lastIndexOf('-');
+        int idx = messageId.lastIndexOf('-');
         if (idx < 0) return Long.parseLong(messageId);
         return Long.parseLong(messageId.substring(0, idx));
     }

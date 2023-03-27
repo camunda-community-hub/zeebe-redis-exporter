@@ -5,18 +5,23 @@ import io.camunda.zeebe.exporter.api.context.Context;
 import io.camunda.zeebe.exporter.api.context.Controller;
 import io.camunda.zeebe.protocol.record.Record;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisFuture;
+import io.lettuce.core.SetArgs;
 import io.lettuce.core.XTrimArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
 import org.slf4j.Logger;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public class RedisExporter implements Exporter {
+
+  private final static String CLEANUP = "zeebe:redis-cleanup";
 
   private ExporterConfiguration config;
   private Logger logger;
@@ -54,14 +59,14 @@ public class RedisExporter implements Exporter {
     trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
     streamPrefix = config.getName() + ":";
 
-    final var filter = new RecordFilter(config);
+    final RecordFilter filter = new RecordFilter(config);
     context.setFilter(filter);
 
     configureFormat();
   }
 
   private void configureFormat() {
-    final var format = config.getFormat();
+    final String format = config.getFormat();
     if (format.equalsIgnoreCase("protobuf")) {
       recordTransformer = this::recordToProtobuf;
       useProtoBuf = true;
@@ -106,14 +111,13 @@ public class RedisExporter implements Exporter {
 
   @Override
   public void export(Record record) {
-
     if (redisConnection != null) {
-      final var now = System.currentTimeMillis();
+      final long now = System.currentTimeMillis();
       final String stream = streamPrefix.concat(record.getValueType().name());
-      final var transformedRecord = recordTransformer.apply(record);
-      final var messageId = redisConnection.async()
+      final Object transformedRecord = recordTransformer.apply(record);
+      final RedisFuture<String> messageId = redisConnection.async()
               .xadd(stream, Long.toString(now), transformedRecord);
-      final var position = record.getPosition();
+      final long position = record.getPosition();
       messageId.thenRun(() -> {
         controller.updateLastExportedRecordPosition(position);
         streams.put(stream, Boolean.TRUE);
@@ -136,43 +140,79 @@ public class RedisExporter implements Exporter {
   }
 
   private void trimStreamValues() {
-    if (streams.size() > 0) {
-      // get ID according to max time to live
-      final var maxTTLMillis = System.currentTimeMillis() - maxTtlInMillisConfig;
-      final var maxTTLId = String.valueOf(maxTTLMillis);
-      // get ID according to min time to live
-      final var minTTLMillis = System.currentTimeMillis() - minTtlInMillisConfig;
-      final var minTTLId = String.valueOf(minTTLMillis);
-      logger.debug("trim streams {}", streams);
-      // trim all streams
-      List<String> keys = new ArrayList(streams.keySet());
-      keys.forEach(stream -> {
-        Optional<Long> minDelivered = !deleteAfterAcknowledge ? Optional.empty() :
-                redisConnection.sync().xinfoGroups(stream)
-                .stream().map(o -> XInfoGroup.fromXInfo(o, useProtoBuf))
-                .map(xi -> {
-                  if (xi.getPending() > 0) {
-                    xi.considerPendingMessageId(redisConnection.sync()
-                            .xpending(stream, xi.getName()).getMessageIds().getLower().getValue());
-                  }
-                  return xi.getLastDeliveredId();
-                })
-                .min(Comparator.comparing(Long::longValue));
-        if (minDelivered.isPresent()) {
-          var minDeliveredMillis = minDelivered.get();
-          String xtrimMinId = String.valueOf(minDeliveredMillis);
-          if (maxTtlInMillisConfig > 0 && maxTTLMillis > minDeliveredMillis) {
-            xtrimMinId = maxTTLId;
-          } else if (minTtlInMillisConfig > 0 && minTTLMillis < minDeliveredMillis){
-            xtrimMinId = minTTLId;
-           }
-          redisConnection.async().xtrim(stream, new XTrimArgs().minId(xtrimMinId));
-        } else if (maxTtlInMillisConfig > 0) {
-          redisConnection.async().xtrim(stream, new XTrimArgs().minId(maxTTLId));
-        }
-      });
+    if (streams.size() > 0 && acquireCleanupLock()) {
+      try {
+        // get ID according to max time to live
+        final long maxTTLMillis = System.currentTimeMillis() - maxTtlInMillisConfig;
+        final String maxTTLId = String.valueOf(maxTTLMillis);
+        // get ID according to min time to live
+        final long minTTLMillis = System.currentTimeMillis() - minTtlInMillisConfig;
+        final String minTTLId = String.valueOf(minTTLMillis);
+        logger.debug("trim streams {}", streams);
+        // trim all streams
+        List<String> keys = new ArrayList(streams.keySet());
+        keys.forEach(stream -> {
+          Optional<Long> minDelivered = !deleteAfterAcknowledge ? Optional.empty() :
+                  redisConnection.sync().xinfoGroups(stream)
+                          .stream().map(o -> XInfoGroup.fromXInfo(o, useProtoBuf))
+                          .map(xi -> {
+                            if (xi.getPending() > 0) {
+                              xi.considerPendingMessageId(redisConnection.sync()
+                                      .xpending(stream, xi.getName()).getMessageIds().getLower().getValue());
+                            }
+                            return xi.getLastDeliveredId();
+                          })
+                          .min(Comparator.comparing(Long::longValue));
+          if (minDelivered.isPresent()) {
+            long minDeliveredMillis = minDelivered.get();
+            String xtrimMinId = String.valueOf(minDeliveredMillis);
+            if (maxTtlInMillisConfig > 0 && maxTTLMillis > minDeliveredMillis) {
+              xtrimMinId = maxTTLId;
+            } else if (minTtlInMillisConfig > 0 && minTTLMillis < minDeliveredMillis) {
+              xtrimMinId = minTTLId;
+            }
+            redisConnection.async().xtrim(stream, new XTrimArgs().minId(xtrimMinId));
+          } else if (maxTtlInMillisConfig > 0) {
+            redisConnection.async().xtrim(stream, new XTrimArgs().minId(maxTTLId));
+          }
+        });
+      } catch (Exception ex) {
+        logger.error("Error during cleanup", ex);
+      } finally {
+        releaseCleanupLock();
+      }
     }
     controller.scheduleCancellableTask(trimScheduleDelay, this::trimStreamValues);
   }
 
+  private boolean acquireCleanupLock() {
+    try {
+      String id = UUID.randomUUID().toString();
+      if (useProtoBuf) {
+        StatefulRedisConnection<String, byte[]> con = (StatefulRedisConnection<String, byte[]>) redisConnection;
+        con.sync().set(CLEANUP, id.getBytes(StandardCharsets.UTF_8), SetArgs.Builder.nx().px(trimScheduleDelay));
+        byte[] getResult = con.sync().get(CLEANUP);
+        if (getResult != null && getResult.length > 0 && id.equals(new String(getResult, StandardCharsets.UTF_8))) {
+          return true;
+        }
+      } else {
+        StatefulRedisConnection<String, String> con = (StatefulRedisConnection<String, String>) redisConnection;
+        con.sync().set(CLEANUP, id, SetArgs.Builder.nx().px(trimScheduleDelay));
+        if (id.equals(con.sync().get(CLEANUP))) {
+          return true;
+        }
+      }
+    } catch (Exception ex) {
+      logger.error("Error acquiring cleanup lock", ex);
+    }
+    return false;
+  }
+
+  private void releaseCleanupLock() {
+    try {
+      redisConnection.sync().del(CLEANUP);
+    } catch (Exception ex) {
+      logger.error("Error releasing cleanup lock", ex);
+    }
+  }
 }

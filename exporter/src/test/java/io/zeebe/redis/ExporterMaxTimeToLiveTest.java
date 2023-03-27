@@ -29,7 +29,7 @@ public class ExporterMaxTimeToLiveTest {
 
   @Container
   public ZeebeTestContainer zeebeContainer = ZeebeTestContainer
-          .withCleanupCycleInSeconds(4).withMaxTTLInSeconds(4);
+          .withCleanupCycleInSeconds(2).withMaxTTLInSeconds(6);
 
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;
@@ -48,7 +48,7 @@ public class ExporterMaxTimeToLiveTest {
   }
 
   @Test
-  public void shouldConsiderTimeToLive() throws Exception {
+  public void shouldConsiderMaxTimeToLive() throws Exception {
     // given
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process.bpmn").send().join();
     final var message = redisConnection.sync()
@@ -59,13 +59,11 @@ public class ExporterMaxTimeToLiveTest {
     assertThat(deploymentLen).isGreaterThan(0);
 
     // when
-    Thread.sleep(1000);
-    zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process2.bpmn").send().join();
-    Thread.sleep(1000);
-    var deploymentLen2 = redisConnection.sync().xlen("zeebe:DEPLOYMENT");
     Thread.sleep(3000);
 
     // then
-    assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(deploymentLen2 - deploymentLen);
+    assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(deploymentLen);
+    Thread.sleep(5000);
+    assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(0);
   }
 }

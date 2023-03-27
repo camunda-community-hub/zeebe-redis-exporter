@@ -15,7 +15,7 @@ public final class RecordFilter implements Context.RecordFilter {
 
   public RecordFilter(ExporterConfiguration config) {
 
-    final var enabledRecordTypeList = parseAsList(config.getEnabledRecordTypes());
+    final List<String> enabledRecordTypeList = parseAsList(config.getEnabledRecordTypes());
 
     enabledRecordTypes =
         Arrays.stream(RecordType.values())
@@ -25,7 +25,7 @@ public final class RecordFilter implements Context.RecordFilter {
                         || enabledRecordTypeList.contains(recordType.name()))
             .collect(Collectors.toList());
 
-    final var enabledValueTypeList = parseAsList(config.getEnabledValueTypes());
+    final List<String> enabledValueTypeList = parseAsList(config.getEnabledValueTypes());
 
     enabledValueTypes =
         Arrays.stream(ValueType.values())
