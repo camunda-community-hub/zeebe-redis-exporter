@@ -16,7 +16,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
-public class ExporterTimeToLiveTest {
+public class ExporterMaxTimeToLiveTest {
 
   private static final BpmnModelInstance WORKFLOW =
       Bpmn.createExecutableProcess("process")

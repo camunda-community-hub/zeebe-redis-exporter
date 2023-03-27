@@ -30,6 +30,11 @@ public class ZeebeTestContainer extends ZeebeContainer {
         return this;
     }
 
+    public ZeebeTestContainer withMinTTLInSeconds(long minTimeToLiveInSeconds) {
+        withEnv("ZEEBE_REDIS_MIN_TIME_TO_LIVE_IN_SECONDS", Long.toString(minTimeToLiveInSeconds));
+        return this;
+    }
+
     public static ZeebeTestContainer withCleanupCycleInSeconds(long cleanupCycleInSeconds) {
         ZeebeTestContainer container = withDefaultConfig();
         container.withEnv("ZEEBE_REDIS_CLEANUP_CYCLE_IN_SECONDS", Long.toString(cleanupCycleInSeconds));
