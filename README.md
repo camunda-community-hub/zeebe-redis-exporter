@@ -16,9 +16,11 @@ Multiple applications can read from such streams each using a unique consumer gr
 
 The Java connector provides a convenient way to read the records from Redis Streams.
 
-## Hint
+## Why Redis?
 
-This project is still in incubation phase. It works, but especially the Java connector may be subject to changes, for example with regard to topics such as error handling, restarting, etc. The topic of cleaning up the messages in Redis has also not yet been finally thought through.
+Redis ([https://redis.io/](https://redis.io/)) offers a lot of options to us. We can use it as fast in-memory technology and simple transport layer. We can optionally add persistence, but it is not required. We have Redis streams at our hand which are great when we want to use multiple consumers and scaling on the event receiver side. In Java the Lettuce client ([https://lettuce.io/](https://lettuce.io/)) offers great connectivity features out of the box, so that the exporter itself is easy to maintain. …
+
+If neither the Hazelcast nor the Kafka exporter fits your exact needs, this could be the one you’re looking for.
 
 If you have any suggestions, please let us know - it's a community project.
 
@@ -32,7 +34,7 @@ Add the Maven dependency to your `pom.xml`
 <dependency>
 	<groupId>io.zeebe.redis</groupId>
 	<artifactId>zeebe-redis-connector</artifactId>
-	<version>0.9.3</version>
+	<version>0.9.4</version>
 </dependency>
 ```
 
@@ -108,7 +110,7 @@ Hence the choice is yours.
 A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
-docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.1.9-0.9.3
+docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.1.9-0.9.4
 ```
 
 For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter.
@@ -124,12 +126,12 @@ docker-compose up -d
 1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) _(camunda-zeebe-%{VERSION}.tar.gz
    )_
 
-1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-0.9.3-jar-with-dependencies.jar_)
+1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-0.9.4-jar-with-dependencies.jar_)
 
 1. Copy the exporter JAR  into the broker folder `~/zeebe-broker-%{VERSION}/exporters`.
 
     ```
-    cp exporter/target/zeebe-redis-exporter-0.9.3-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
+    cp exporter/target/zeebe-redis-exporter-0.9.4-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
     ```
 
 1. Add the exporter to the broker configuration `~/zeebe-broker-%{VERSION}/config/application.yaml`:
@@ -140,7 +142,7 @@ docker-compose up -d
         exporters:
           redis:
             className: io.zeebe.redis.exporter.RedisExporter
-            jarPath: exporters/zeebe-redis-exporter-0.9.3-jar-with-dependencies.jar
+            jarPath: exporters/zeebe-redis-exporter-0.9.4-jar-with-dependencies.jar
     ```
 
 1. Set the environment variable `ZEEBE_REDIS_REMOTE_ADDRESS` to your Redis URL.
@@ -227,7 +229,7 @@ services:
       - "26500:26500"
       - "9600:9600"
     volumes:
-      - ../exporter/target/zeebe-redis-exporter-0.9.3-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
+      - ../exporter/target/zeebe-redis-exporter-0.9.4-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
       - ./application.yaml:/usr/local/zeebe/config/application.yaml
     networks:
       - zeebe_network
