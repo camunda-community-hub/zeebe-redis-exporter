@@ -21,7 +21,8 @@ import java.util.function.Function;
 
 public class RedisExporter implements Exporter {
 
-  private final static String CLEANUP = "zeebe:redis-cleanup";
+  private final static String CLEANUP_LOCK = "zeebe:cleanup-lock";
+  private final static String CLEANUP_TIMESTAMP = "zeebe:cleanup-time";
 
   private ExporterConfiguration config;
   private Logger logger;
@@ -49,7 +50,7 @@ public class RedisExporter implements Exporter {
     logger = context.getLogger();
     config = context.getConfiguration().instantiate(ExporterConfiguration.class);
 
-    logger.info("Starting exporter with configuration: {}", config);
+    logger.info("Starting Redis exporter with configuration: {}", config);
 
     minTtlInMillisConfig = config.getMinTimeToLiveInSeconds() * 1000l;
     if (minTtlInMillisConfig < 0) minTtlInMillisConfig = 0;
@@ -122,7 +123,8 @@ public class RedisExporter implements Exporter {
         controller.updateLastExportedRecordPosition(position);
         streams.put(stream, Boolean.TRUE);
         try {
-          logger.trace("Added a record with key {} to stream {}, messageId: {}", now, stream, messageId.get());
+          if (logger.isTraceEnabled())
+            logger.trace("Added a record with key {} to stream {}, messageId: {}", now, stream, messageId.get());
         } catch (Exception ex) {
           // NOOP: required catch from messageId.get()
         }
@@ -171,9 +173,15 @@ public class RedisExporter implements Exporter {
             } else if (minTtlInMillisConfig > 0 && minTTLMillis < minDeliveredMillis) {
               xtrimMinId = minTTLId;
             }
-            redisConnection.sync().xtrim(stream, new XTrimArgs().minId(xtrimMinId));
+            long numTrimmed = redisConnection.sync().xtrim(stream, new XTrimArgs().minId(xtrimMinId));
+            if (numTrimmed > 0) {
+              logger.debug("{}: {} cleaned records", stream, numTrimmed);
+            }
           } else if (maxTtlInMillisConfig > 0) {
-            redisConnection.sync().xtrim(stream, new XTrimArgs().minId(maxTTLId));
+            long numTrimmed = redisConnection.sync().xtrim(stream, new XTrimArgs().minId(maxTTLId));
+            if (numTrimmed > 0) {
+              logger.debug("{}: {} cleaned records", stream, numTrimmed);
+            }
           }
         });
       } catch (Exception ex) {
@@ -188,18 +196,34 @@ public class RedisExporter implements Exporter {
   private boolean acquireCleanupLock() {
     try {
       String id = UUID.randomUUID().toString();
+      Long now = System.currentTimeMillis();
+      // ProtoBuf format
       if (useProtoBuf) {
+        // try to get lock
         StatefulRedisConnection<String, byte[]> con = (StatefulRedisConnection<String, byte[]>) redisConnection;
-        con.sync().set(CLEANUP, id.getBytes(StandardCharsets.UTF_8), SetArgs.Builder.nx().px(trimScheduleDelay));
-        byte[] getResult = con.sync().get(CLEANUP);
+        con.sync().set(CLEANUP_LOCK, id.getBytes(StandardCharsets.UTF_8), SetArgs.Builder.nx().px(trimScheduleDelay));
+        byte[] getResult = con.sync().get(CLEANUP_LOCK);
         if (getResult != null && getResult.length > 0 && id.equals(new String(getResult, StandardCharsets.UTF_8))) {
-          return true;
+          // lock successful: check last cleanup timestamp (autoscaled new Zeebe instances etc.)
+          byte[] lastCleanup = con.sync().get(CLEANUP_TIMESTAMP);
+          if (lastCleanup == null || lastCleanup.length == 0 ||
+                  Long.parseLong(new String(lastCleanup, StandardCharsets.UTF_8)) < now - trimScheduleDelay.toMillis()) {
+            con.sync().set(CLEANUP_TIMESTAMP, Long.toString(now).getBytes(StandardCharsets.UTF_8));
+            return true;
+          }
         }
+      // JSON format
       } else {
+        // try to get lock
         StatefulRedisConnection<String, String> con = (StatefulRedisConnection<String, String>) redisConnection;
-        con.sync().set(CLEANUP, id, SetArgs.Builder.nx().px(trimScheduleDelay));
-        if (id.equals(con.sync().get(CLEANUP))) {
-          return true;
+        con.sync().set(CLEANUP_LOCK, id, SetArgs.Builder.nx().px(trimScheduleDelay));
+        if (id.equals(con.sync().get(CLEANUP_LOCK))) {
+          // lock successful: check last cleanup timestamp (autoscaled new Zeebe instances etc.)
+          String lastCleanup = con.sync().get(CLEANUP_TIMESTAMP);
+          if (lastCleanup == null || lastCleanup.isEmpty() || Long.parseLong(lastCleanup) < now - trimScheduleDelay.toMillis()) {
+            con.sync().set(CLEANUP_TIMESTAMP, Long.toString(now));
+            return true;
+          }
         }
       }
     } catch (Exception ex) {
@@ -210,7 +234,7 @@ public class RedisExporter implements Exporter {
 
   private void releaseCleanupLock() {
     try {
-      redisConnection.sync().del(CLEANUP);
+      redisConnection.sync().del(CLEANUP_LOCK);
     } catch (Exception ex) {
       logger.error("Error releasing cleanup lock", ex);
     }
