@@ -21,6 +21,7 @@ public class ZeebeRedis implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(ZeebeRedis.class);
 
   private static final Map <String, Class<? extends com.google.protobuf.Message>> RECORD_MESSAGE_TYPES;
+  private static final int XREAD_BLOCK_MILLISECONDS = 2000;
 
   static {
     RECORD_MESSAGE_TYPES = Map.ofEntries(
@@ -220,7 +221,7 @@ public class ZeebeRedis implements AutoCloseable {
     try {
       List<StreamMessage<String, byte[]>> messages = redisConnection.sync()
               .xreadgroup(io.lettuce.core.Consumer.from(consumerGroup, consumerId),
-                      XReadArgs.Builder.block(2000), offsets);
+                      XReadArgs.Builder.block(XREAD_BLOCK_MILLISECONDS), offsets);
 
       for (StreamMessage<String, byte[]> message : messages) {
         LOGGER.trace("Consumer[id={}] received message {} from {}", consumerId, message.getId(), message.getStream());
