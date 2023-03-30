@@ -71,7 +71,9 @@ public class ZeebeRedis implements AutoCloseable {
   private Future<?> reconnectFuture;
   private ExecutorService reconnectExecutorService;
   private volatile boolean isClosed = false;
-  private volatile boolean externalClose = false;
+  private volatile boolean forcedClose = false;
+
+  private boolean shouldDestroyConsumerGroupOnClose = false;
 
   private ZeebeRedis(RedisClient redisClient,
                      StatefulRedisConnection<String, byte[]> redisConnection,
@@ -79,7 +81,8 @@ public class ZeebeRedis implements AutoCloseable {
                      String consumerGroup, String consumerId,
                      String prefix, XReadArgs.StreamOffset<String>[] offsets,
                      Map<String, List<Consumer<?>>> listeners,
-                     boolean deleteMessages) {
+                     boolean deleteMessages,
+                     boolean shouldDestroyConsumerGroupOnClose) {
     this.redisClient = redisClient;
     this.redisConnection = redisConnection;
     this.reconnectUsesNewConnection = reconnectUsesNewConnection;
@@ -90,6 +93,10 @@ public class ZeebeRedis implements AutoCloseable {
     this.offsets = offsets;
     this.listeners = listeners;
     this.deleteMessages = deleteMessages;
+    this.shouldDestroyConsumerGroupOnClose = shouldDestroyConsumerGroupOnClose;
+    if (this.shouldDestroyConsumerGroupOnClose) {
+      LOGGER.warn("No Redis consumer group configured! Will use unique disposable group {}", consumerGroup);
+    }
   }
 
   /** Returns a new builder to read from the Redis Streams. */
@@ -103,7 +110,7 @@ public class ZeebeRedis implements AutoCloseable {
         LOGGER.info("Redis reconnected.");
       }
       public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
-        if (externalClose) return;
+        if (forcedClose) return;
         LOGGER.warn("Redis connection lost.");
         if (reconnectUsesNewConnection) {
           doClose();
@@ -112,7 +119,7 @@ public class ZeebeRedis implements AutoCloseable {
         }
       }
     });
-    externalClose = false;
+    forcedClose = false;
     isClosed = false;
     executorService = Executors.newSingleThreadExecutor();
     future = executorService.submit(this::readFromStream);
@@ -150,11 +157,26 @@ public class ZeebeRedis implements AutoCloseable {
   /** Stop reading from the Redis Strams. */
   @Override
   public void close() {
-    externalClose = true;
+    if (shouldDestroyConsumerGroupOnClose) {
+      Arrays.stream(offsets).forEach(o -> {
+        String stream = String.valueOf(o.getName());
+        LOGGER.debug("Destroying consumer group {} of stream {}", consumerGroup, stream);
+        try {
+          redisConnection.sync().xgroupDestroy(stream, consumerGroup);
+        } catch (Exception ex) {
+          LOGGER.error("Error destroying consumer group {} of stream {}", consumerGroup, stream);
+        }
+      });
+    }
+    forceClose();
+  }
+
+  private void forceClose() {
+    forcedClose = true;
     doClose();
   }
 
-  public void doClose() {
+  private void doClose() {
     LOGGER.info("Closing Consumer[group={}, id={}]. Stop reading from streams '{}*'.", consumerGroup, consumerId, prefix);
 
     isClosed = true;
@@ -212,7 +234,7 @@ public class ZeebeRedis implements AutoCloseable {
       // should not happen with a correct configuration
       LOGGER.error("Illegal arguments for xreadgroup: {}. Closing Redis client.", ex.getMessage());
       try {
-        close();
+        forceClose();
       } catch (Exception closingFailure) {
         LOGGER.debug("Failure while closing the client", closingFailure);
       }
@@ -225,7 +247,7 @@ public class ZeebeRedis implements AutoCloseable {
       if (!isClosed) {
         LOGGER.error("Consumer[group={}, id={}] failed to read from streams '{}*': {}. Initiating reconnect.", consumerGroup, consumerId, prefix, e.getMessage());
         try {
-          close();
+          forceClose();
         } catch (Exception closingFailure) {
           LOGGER.debug("Failure while closing the client", closingFailure);
         }
@@ -281,6 +303,8 @@ public class ZeebeRedis implements AutoCloseable {
 
     private String consumerGroup = UUID.randomUUID().toString();
 
+    private boolean shouldDestroyConsumerGroupOnClose = true;
+
     private String consumerId = UUID.randomUUID().toString();
     private String prefix = "zeebe:";
 
@@ -305,6 +329,7 @@ public class ZeebeRedis implements AutoCloseable {
     /** Set the consumer group, e.g. the application name. */
     public Builder consumerGroup(String consumerGroup) {
       this.consumerGroup = consumerGroup;
+      this.shouldDestroyConsumerGroupOnClose = false;
       return this;
     }
 
@@ -441,7 +466,7 @@ public class ZeebeRedis implements AutoCloseable {
 
       final var connection = redisClient.connect(new ProtobufCodec());
 
-      LOGGER.info("Read from streams '{}*' with offset '{}'", prefix, offset);
+      LOGGER.info("Read from Redis streams '{}*' with offset '{}'", prefix, offset);
 
       // Prepare
       List<XReadArgs.StreamOffset<String>> offsets = new ArrayList<>();
@@ -457,7 +482,7 @@ public class ZeebeRedis implements AutoCloseable {
 
       final var zeebeRedis = new ZeebeRedis(redisClient, connection, reconnectUsesNewConnection, reconnectInterval,
               consumerGroup, consumerId, prefix, offsets.toArray(new XReadArgs.StreamOffset[0]), listeners,
-              deleteMessages);
+              deleteMessages, shouldDestroyConsumerGroupOnClose);
       zeebeRedis.start();
 
       return zeebeRedis;
