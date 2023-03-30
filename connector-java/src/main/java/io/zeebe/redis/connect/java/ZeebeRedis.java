@@ -198,7 +198,7 @@ public class ZeebeRedis implements AutoCloseable {
     try {
       List<StreamMessage<String, byte[]>> messages = redisConnection.sync()
               .xreadgroup(io.lettuce.core.Consumer.from(consumerGroup, consumerId),
-                      XReadArgs.Builder.block(Long.MAX_VALUE), offsets);
+                      XReadArgs.Builder.block(2000), offsets);
 
       for (StreamMessage<String, byte[]> message : messages) {
         LOGGER.trace("Consumer[id={}] received message {} from {}", consumerId, message.getId(), message.getStream());
