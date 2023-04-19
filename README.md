@@ -61,7 +61,7 @@ redisClient.shutdown();
 #### Dealing with Lettuce versions
 
 Under the hood the exporter and the connector uses Lettuce as Redis client.
-Please be aware that the connector requires `io.lettuce:lettuce-core:6.2.2.RELEASE`. In case your project uses a parent POM with lower and potentially incompatible versions you have to take care to deactivate them.
+Please be aware that the connector requires at minimum `io.lettuce:lettuce-core:6.2.2.RELEASE`. In case your project uses a parent POM with lower and potentially incompatible versions you have to take care to deactivate them.
 E.g. do something like
 ```
   <properties>
@@ -104,6 +104,18 @@ Enhanced exporter side algorithms can be found in the exporter's configuration s
 
 Of course it is possible to combine this simple client side mechanism with the exporter mechanism.
 Hence the choice is yours.
+
+#### Tuning connector performance
+*Since 0.9.6*
+
+Reading Redis streams is carried out by using the `XREAD COUNT count BLOCK milliseconds ...` command. In order to tune
+connector performance you are able to set the count (maximum number of messages read at once, default is 500) and block milliseconds (maximum blocking time, default is 2000) parameter:
+
+```java
+final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
+        .xreadCount(500).xreadBlockMillis(2000)
+        ...
+```
 
 ## Install
 

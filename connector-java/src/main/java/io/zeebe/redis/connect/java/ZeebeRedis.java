@@ -22,7 +22,7 @@ public class ZeebeRedis implements AutoCloseable {
 
   private static final Map <String, Class<? extends com.google.protobuf.Message>> RECORD_MESSAGE_TYPES;
   private static final int XREAD_BLOCK_MILLISECONDS = 2000;
-  private static final int XREAD_COUNT = 1000;
+  private static final int XREAD_COUNT = 500;
 
   static {
     RECORD_MESSAGE_TYPES = Map.ofEntries(
@@ -53,6 +53,10 @@ public class ZeebeRedis implements AutoCloseable {
 
   private StatefulRedisConnection<String, byte[]> redisConnection;
 
+  private int xreadBlockMillis = XREAD_BLOCK_MILLISECONDS;
+
+  private int xreadCount = XREAD_COUNT;
+
   private String consumerGroup;
 
   private String consumerId;
@@ -80,6 +84,7 @@ public class ZeebeRedis implements AutoCloseable {
   private ZeebeRedis(RedisClient redisClient,
                      StatefulRedisConnection<String, byte[]> redisConnection,
                      boolean reconnectUsesNewConnection, Duration reconnectInterval,
+                     int xreadBlockMillis, int xreadCount,
                      String consumerGroup, String consumerId,
                      String prefix, XReadArgs.StreamOffset<String>[] offsets,
                      Map<String, List<Consumer<?>>> listeners,
@@ -89,6 +94,8 @@ public class ZeebeRedis implements AutoCloseable {
     this.redisConnection = redisConnection;
     this.reconnectUsesNewConnection = reconnectUsesNewConnection;
     this.reconnectIntervalMillis = reconnectInterval.toMillis();
+    this.xreadBlockMillis = xreadBlockMillis;
+    this.xreadCount = xreadCount;
     this.consumerGroup = consumerGroup;
     this.consumerId = consumerId;
     this.prefix = prefix;
@@ -222,7 +229,7 @@ public class ZeebeRedis implements AutoCloseable {
     try {
       List<StreamMessage<String, byte[]>> messages = redisConnection.sync()
               .xreadgroup(io.lettuce.core.Consumer.from(consumerGroup, consumerId),
-                      XReadArgs.Builder.block(XREAD_BLOCK_MILLISECONDS).count(XREAD_COUNT), offsets);
+                      XReadArgs.Builder.block(xreadBlockMillis).count(xreadCount), offsets);
 
       for (StreamMessage<String, byte[]> message : messages) {
         LOGGER.trace("Consumer[id={}] received message {} from {}", consumerId, message.getId(), message.getStream());
@@ -312,6 +319,10 @@ public class ZeebeRedis implements AutoCloseable {
 
     private String offset = "0-0";
 
+    private int xreadBlockMillis = XREAD_BLOCK_MILLISECONDS;
+
+    private int xreadCount = XREAD_COUNT;
+
     private boolean deleteMessages = false;
 
     private Builder(RedisClient redisClient) {
@@ -325,6 +336,18 @@ public class ZeebeRedis implements AutoCloseable {
 
     public Builder reconnectInterval(Duration duration) {
       this.reconnectInterval = duration;
+      return this;
+    }
+
+    /** Sets the XREAD [BLOCK milliseconds] parameter. Default is 2000. */
+    public Builder xreadBlockMillis(int xreadBlockMillis) {
+      this.xreadBlockMillis = xreadBlockMillis;
+      return this;
+    }
+
+    /** Sets the XREAD [COUNT count] parameter. Default is 1000. */
+    public Builder xreadCount(int xreadCount) {
+      this.xreadCount = xreadCount;
       return this;
     }
 
@@ -483,8 +506,9 @@ public class ZeebeRedis implements AutoCloseable {
       });
 
       final var zeebeRedis = new ZeebeRedis(redisClient, connection, reconnectUsesNewConnection, reconnectInterval,
-              consumerGroup, consumerId, prefix, offsets.toArray(new XReadArgs.StreamOffset[0]), listeners,
-              deleteMessages, shouldDestroyConsumerGroupOnClose);
+              xreadBlockMillis, xreadCount, consumerGroup, consumerId, prefix,
+              offsets.toArray(new XReadArgs.StreamOffset[0]), listeners, deleteMessages,
+              shouldDestroyConsumerGroupOnClose);
       zeebeRedis.start();
 
       return zeebeRedis;
