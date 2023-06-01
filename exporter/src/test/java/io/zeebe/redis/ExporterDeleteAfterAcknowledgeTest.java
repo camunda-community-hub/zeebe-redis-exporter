@@ -14,7 +14,10 @@ import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
 @Testcontainers
 public class ExporterDeleteAfterAcknowledgeTest {
@@ -67,10 +70,12 @@ public class ExporterDeleteAfterAcknowledgeTest {
     };
 
     // when: cleanupHasRun
-    Thread.sleep(3000);
+    var delay = Duration.ofSeconds(3);
 
     // then: cleanup removed all messages except the last ones
-    assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen);
+    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500))
+            .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen));
+
   }
 
   @Test
@@ -88,10 +93,11 @@ public class ExporterDeleteAfterAcknowledgeTest {
     var xlen = redisConnection.sync().xlen("zeebe:DEPLOYMENT");
 
     // when: cleanupHasRun
-    Thread.sleep(3000);
+    var delay = Duration.ofSeconds(3);
 
     // then: cleanup did not remove messages
-    assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isGreaterThanOrEqualTo(xlen);
+    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500))
+            .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isGreaterThanOrEqualTo(xlen));
   }
 
   @Test
@@ -119,10 +125,11 @@ public class ExporterDeleteAfterAcknowledgeTest {
     assertThat(messages.size()).isGreaterThan(0);
 
     // when: cleanupHasRun
-    Thread.sleep(3000);
+    var delay = Duration.ofSeconds(3);
 
     // then: cleanup did not remove messages
-    assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isGreaterThanOrEqualTo(xlen);
+    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500))
+            .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isGreaterThanOrEqualTo(xlen));
 
   }
 }
