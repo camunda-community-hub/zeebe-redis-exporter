@@ -38,6 +38,7 @@ public class ExporterMaxTimeToLiveTest {
   public void init() {
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
     redisConnection = redisClient.connect(new ProtobufCodec());
+    redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);
   }
 
   @AfterEach
@@ -63,7 +64,7 @@ public class ExporterMaxTimeToLiveTest {
 
     // then
     assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(deploymentLen);
-    Thread.sleep(5000);
+    Thread.sleep(7000);
     assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(0);
   }
 }
