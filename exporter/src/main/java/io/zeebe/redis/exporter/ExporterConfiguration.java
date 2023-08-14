@@ -1,5 +1,7 @@
 package io.zeebe.redis.exporter;
 
+import io.lettuce.core.RedisURI;
+
 import java.time.Duration;
 import java.util.Optional;
 
@@ -56,10 +58,11 @@ public class ExporterConfiguration {
     return getEnv("NAME").orElse(name);
   }
 
-  public Optional<String> getRemoteAddress() {
+  public Optional<RedisURI> getRemoteAddress() {
     return getEnv("REMOTE_ADDRESS")
             .or(() -> Optional.ofNullable(remoteAddress))
-            .filter(remoteAddress -> !remoteAddress.isEmpty());
+            .filter(remoteAddress -> !remoteAddress.isEmpty())
+            .map(RedisURI::create);
   }
 
   private Optional<String> getEnv(String name) {
