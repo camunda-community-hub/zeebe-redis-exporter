@@ -16,7 +16,7 @@
     <properties>
         <version.zeebe>8.2.12</version.zeebe>
         <version.exporter.protobuf>1.4.0</version.exporter.protobuf>
-        <version.lettuce>6.2.5.RELEASE</version.lettuce>
+        <version.lettuce>6.2.6.RELEASE</version.lettuce>
         <version.log4j>2.20.0</version.log4j>
         <version.zeebe.testcontainers>3.6.0</version.zeebe.testcontainers>
         <version.junit>5.10.0</version.junit>
