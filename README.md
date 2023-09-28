@@ -119,11 +119,11 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
 
 *Additional recommendations*
 
-When creating the Redis Client it is recommended to set an appropriate IO-ThreadPool-Size:
+When creating the Redis Client it might as well help to set an appropriate IO-ThreadPool-Size:
 
 ```java
 var redisClient = RedisClient.create(
-        ClientResources.builder().ioThreadPoolSize(25).build(),
+        ClientResources.builder().ioThreadPoolSize(16).build(),
         redisAddress);
 ```
 
@@ -222,8 +222,8 @@ zeebe:
           # Redis stream automatic cleanup of acknowledged messages. Default is false.   
           deleteAfterAcknowledge: false
 
-          # Redis Client IO-Thread-Pool-Size. Default is 25.
-          ioThreadPoolSize: 25
+          # Redis Client IO-Thread-Pool-Size. Default is 16.
+          ioThreadPoolSize: 16
 
           # record serialization format: [protobuf|json]
           format: "protobuf"
@@ -248,7 +248,7 @@ networks:
 services:
   zeebe:
     container_name: zeebe_broker
-    image: camunda/zeebe:8.2.2
+    image: camunda/zeebe:8.2.15
     environment:
       - ZEEBE_LOG_LEVEL=debug
       - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379

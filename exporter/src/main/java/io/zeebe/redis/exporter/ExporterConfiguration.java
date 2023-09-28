@@ -26,7 +26,7 @@ public class ExporterConfiguration {
 
   private boolean deleteAfterAcknowledge = false;
 
-  private int ioThreadPoolSize = 25;
+  private int ioThreadPoolSize = 16;
 
   public long getCleanupCycleInSeconds() {
     return getEnv("CLEANUP_CYCLE_IN_SECONDS").map(Long::parseLong).orElse(cleanupCycleInSeconds);
