@@ -26,6 +26,8 @@ public class ExporterConfiguration {
 
   private boolean deleteAfterAcknowledge = false;
 
+  private int ioThreadPoolSize = 25;
+
   public long getCleanupCycleInSeconds() {
     return getEnv("CLEANUP_CYCLE_IN_SECONDS").map(Long::parseLong).orElse(cleanupCycleInSeconds);
   }
@@ -40,6 +42,10 @@ public class ExporterConfiguration {
 
   public boolean isDeleteAfterAcknowledge() {
     return getEnv("DELETE_AFTER_ACKNOWLEDGE").map(Boolean::parseBoolean).orElse(deleteAfterAcknowledge);
+  }
+
+  public int getIoThreadPoolSize() {
+    return getEnv("IO_THREAD_POOL_SIZE").map(Integer::parseInt).orElse(ioThreadPoolSize);
   }
 
   public String getFormat() {
@@ -81,6 +87,7 @@ public class ExporterConfiguration {
             ", minTimeToLiveInSeconds=" + getMinTimeToLiveInSeconds() +
             ", maxTimeToLiveInSeconds=" + getMaxTimeToLiveInSeconds() +
             ", deleteAfterAcknowledge=" + isDeleteAfterAcknowledge() +
+            ", ioThreadPoolSize=" + getIoThreadPoolSize() +
             ']';
   }
 }

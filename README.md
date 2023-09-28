@@ -117,6 +117,16 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
         ...
 ```
 
+*Additional recommendations*
+
+When creating the Redis Client it is recommended to set an appropriate IO-ThreadPool-Size:
+
+```java
+var redisClient = RedisClient.create(
+        ClientResources.builder().ioThreadPoolSize(25).build(),
+        redisAddress);
+```
+
 ## Install
 
 ### Docker
@@ -211,6 +221,9 @@ zeebe:
 
           # Redis stream automatic cleanup of acknowledged messages. Default is false.   
           deleteAfterAcknowledge: false
+
+          # Redis Client IO-Thread-Pool-Size. Default is 25.
+          ioThreadPoolSize: 25
 
           # record serialization format: [protobuf|json]
           format: "protobuf"

@@ -6,6 +6,7 @@ import io.camunda.zeebe.exporter.api.context.Controller;
 import io.camunda.zeebe.protocol.record.Record;
 import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.resource.ClientResources;
 import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
 import org.slf4j.Logger;
@@ -87,7 +88,9 @@ public class RedisExporter implements Exporter {
       throw new IllegalStateException("Missing ZEEBE_REDIS_REMOTE_ADDRESS configuration.");
     }
 
-    redisClient = RedisClient.create(config.getRemoteAddress().get());
+    redisClient = RedisClient.create(
+            ClientResources.builder().ioThreadPoolSize(config.getIoThreadPoolSize()).build(),
+            config.getRemoteAddress().get());
     redisConnection = useProtoBuf ? redisClient.connect(new ProtobufCodec()) : redisClient.connect();
 
     logger.info("Successfully connected Redis exporter to {}", config.getRemoteAddress().get());
