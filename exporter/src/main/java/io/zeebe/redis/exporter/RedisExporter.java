@@ -4,10 +4,7 @@ import io.camunda.zeebe.exporter.api.Exporter;
 import io.camunda.zeebe.exporter.api.context.Context;
 import io.camunda.zeebe.exporter.api.context.Controller;
 import io.camunda.zeebe.protocol.record.Record;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisFuture;
-import io.lettuce.core.SetArgs;
-import io.lettuce.core.XTrimArgs;
+import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
@@ -184,6 +181,8 @@ public class RedisExporter implements Exporter {
             }
           }
         });
+      } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
+        logger.error("Error during cleanup due to possible Redis unavailability: ", ex.getMessage());
       } catch (Exception ex) {
         logger.error("Error during cleanup", ex);
       } finally {
@@ -226,6 +225,8 @@ public class RedisExporter implements Exporter {
           }
         }
       }
+    } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
+      logger.error("Error acquiring cleanup lock due to possible Redis unavailability: ", ex.getMessage());
     } catch (Exception ex) {
       logger.error("Error acquiring cleanup lock", ex);
     }
@@ -235,6 +236,8 @@ public class RedisExporter implements Exporter {
   private void releaseCleanupLock() {
     try {
       redisConnection.sync().del(CLEANUP_LOCK);
+    } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
+      logger.error("Error releasing cleanup lock due to possible Redis unavailability: ", ex.getMessage());
     } catch (Exception ex) {
       logger.error("Error releasing cleanup lock", ex);
     }
