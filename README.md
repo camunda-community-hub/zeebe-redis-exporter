@@ -123,7 +123,7 @@ When creating the Redis Client it might as well help to set an appropriate IO-Th
 
 ```java
 var redisClient = RedisClient.create(
-        ClientResources.builder().ioThreadPoolSize(8).build(),
+        ClientResources.builder().ioThreadPoolSize(4).build(),
         redisAddress);
 ```
 
@@ -222,8 +222,14 @@ zeebe:
           # Redis stream automatic cleanup of acknowledged messages. Default is false.   
           deleteAfterAcknowledge: false
 
-          # Redis Client IO-Thread-Pool-Size. Default is number of available processors but not smaller than 4.
-          ioThreadPoolSize: 4
+          # Redis Client IO-Thread-Pool-Size. Default is number of available processors but not smaller than 2.
+          ioThreadPoolSize: 2
+
+          # Redis batch size for flushing commands when sending data to Redis streams. Default is 250. Maximum number of events which will be flushed simultaneously.
+          batchSize: 250
+
+          # Redis batch cycle in milliseconds for sending data to Redis streams. Default is 500. Even if the batch size has not been reached events will be sent after this time.
+          batchCycleMillis: 500
 
           # record serialization format: [protobuf|json]
           format: "protobuf"
@@ -305,6 +311,21 @@ Cleanup is synchronized between different Zeebe nodes so that the cleanup does n
 
 Version 0.9.2 comes with a single cleanup parameter `ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS`
 which is equal to the `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS` since version 0.9.3.
+
+#### Tuning exporter performance
+
+*Since 0.9.8*
+
+In order to tune the exporter performance you have the following options available:
+
+| **Parameter**                     | **Description**                                                                                                                                         |
+|-----------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ZEEBE_REDIS_BATCH_SIZE`          | Batch size for flushing commands when sending data. Default is `250`. More precisely the maximum number of events which will be flushed simultaneously. |
+| `ZEEBE_REDIS_BATCH_CYCLE_MILLIS`  | Batch cycle in milliseconds for sending data. Default is `500`. Even if the batch size has not been reached events will be sent after this time.        |
+| `ZEEBE_REDIS_IO_THREAD_POOL_SIZE` | Redis Client IO-Thread-Pool-Size. Default is number of available processors but not smaller than `2`.                                                   |
+
+The exporter queues records and sends them every `ZEEBE_REDIS_BATCH_CYCLE_MILLIS`. Sending data then does not use the default auto-flush / flush-after-write mode of Lettuce but groups multiple 
+commands in a batch using `ZEEBE_REDIS_BATCH_SIZE` as maximum thus increasing the throughput. According to the Lettuce documentation batches are recommended to have a size between 50 and 1000.
 
 ## Build it from Source
 

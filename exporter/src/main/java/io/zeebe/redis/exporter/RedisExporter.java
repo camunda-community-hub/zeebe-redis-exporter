@@ -9,39 +9,44 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.resource.ClientResources;
 import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 public class RedisExporter implements Exporter {
-
-  private final static String CLEANUP_LOCK = "zeebe:cleanup-lock";
-  private final static String CLEANUP_TIMESTAMP = "zeebe:cleanup-time";
 
   private ExporterConfiguration config;
   private Logger logger;
   private Controller controller;
 
   private RedisClient redisClient;
-  private StatefulRedisConnection<String, ?> redisConnection;
+  private StatefulRedisConnection<String, ?> cleanupConnection;
+  private StatefulRedisConnection<String, ?> senderConnection;
   private Function<Record, ?> recordTransformer;
 
-  private Map<String, Boolean> streams = new ConcurrentHashMap<>();
-
   private boolean useProtoBuf = false;
-  private long maxTtlInMillisConfig = 0;
-  private long minTtlInMillisConfig = 0;
-  private boolean deleteAfterAcknowledge = false;
 
   private Duration trimScheduleDelay;
 
   private String streamPrefix;
 
-  private HashMap<String, Long> positions = new HashMap<>();
+  private EventQueue eventQueue = new EventQueue();
+
+  private RedisCleaner redisCleaner;
+
+  private RedisSender redisSender;
+
+  // The ExecutorService allows to schedule a regular send task independent of the actual load
+  // which controller.scheduleCancellableTask didn't do.
+  private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
   @Override
   public void configure(Context context) {
@@ -50,11 +55,6 @@ public class RedisExporter implements Exporter {
 
     logger.info("Starting Redis exporter with configuration: {}", config);
 
-    minTtlInMillisConfig = config.getMinTimeToLiveInSeconds() * 1000l;
-    if (minTtlInMillisConfig < 0) minTtlInMillisConfig = 0;
-    maxTtlInMillisConfig = config.getMaxTimeToLiveInSeconds() * 1000l;
-    if (maxTtlInMillisConfig < 0) maxTtlInMillisConfig = 0;
-    deleteAfterAcknowledge = config.isDeleteAfterAcknowledge();
     trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
     streamPrefix = config.getName() + ":";
 
@@ -91,10 +91,14 @@ public class RedisExporter implements Exporter {
     redisClient = RedisClient.create(
             ClientResources.builder().ioThreadPoolSize(config.getIoThreadPoolSize()).build(),
             config.getRemoteAddress().get());
-    redisConnection = useProtoBuf ? redisClient.connect(new ProtobufCodec()) : redisClient.connect();
-
+    senderConnection = useProtoBuf ? redisClient.connect(new ProtobufCodec()) : redisClient.connect();
+    cleanupConnection = useProtoBuf ? redisClient.connect(new ProtobufCodec()) : redisClient.connect();
     logger.info("Successfully connected Redis exporter to {}", config.getRemoteAddress().get());
 
+    redisSender = new RedisSender(config, controller, senderConnection, logger);
+    executor.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
+
+    redisCleaner = new RedisCleaner(cleanupConnection, useProtoBuf, config, logger);
     if (config.getCleanupCycleInSeconds() > 0 &&
             (config.isDeleteAfterAcknowledge() || config.getMaxTimeToLiveInSeconds() > 0)) {
       controller.scheduleCancellableTask(trimScheduleDelay, this::trimStreamValues);
@@ -103,34 +107,32 @@ public class RedisExporter implements Exporter {
 
   @Override
   public void close() {
-    if (redisConnection != null) {
-      redisConnection.close();
-      redisConnection = null;
+    executor.shutdown();
+    if (senderConnection != null) {
+      senderConnection.close();
+      senderConnection = null;
+    }
+    if (cleanupConnection != null) {
+      cleanupConnection.close();
+      cleanupConnection = null;
     }
     redisClient.shutdown();
   }
 
   @Override
   public void export(Record record) {
-    if (redisConnection != null) {
-      final long now = System.currentTimeMillis();
-      final String stream = streamPrefix.concat(record.getValueType().name());
-      final Object transformedRecord = recordTransformer.apply(record);
-      final RedisFuture<String> messageId = redisConnection.async()
-              .xadd(stream, Long.toString(now), transformedRecord);
-      final long position = record.getPosition();
-      messageId.thenRun(() -> {
-        controller.updateLastExportedRecordPosition(position);
-        streams.put(stream, Boolean.TRUE);
-        try {
-          if (logger.isTraceEnabled())
-            logger.trace("Added a record with key {} to stream {}, messageId: {}", now, stream, messageId.get());
-        } catch (Exception ex) {
-          // NOOP: required catch from messageId.get()
-        }
-      });
-    }
+    final String stream = streamPrefix.concat(record.getValueType().name());
+    final RedisEvent redisEvent = new RedisEvent(stream,
+            System.currentTimeMillis(), recordTransformer.apply(record));
+    eventQueue.addEvent(new ImmutablePair<>(record.getPosition(), redisEvent));
+    redisCleaner.considerStream(stream);
   }
+
+  private void sendBatches() {
+    redisSender.sendFrom(eventQueue);
+    executor.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
+  }
+
 
   private byte[] recordToProtobuf(Record record) {
     final Schema.Record dto = RecordTransformer.toGenericRecord(record);
@@ -142,107 +144,7 @@ public class RedisExporter implements Exporter {
   }
 
   private void trimStreamValues() {
-    if (streams.size() > 0 && acquireCleanupLock()) {
-      try {
-        // get ID according to max time to live
-        final long maxTTLMillis = System.currentTimeMillis() - maxTtlInMillisConfig;
-        final String maxTTLId = String.valueOf(maxTTLMillis);
-        // get ID according to min time to live
-        final long minTTLMillis = System.currentTimeMillis() - minTtlInMillisConfig;
-        final String minTTLId = String.valueOf(minTTLMillis);
-        logger.debug("trim streams {}", streams);
-        // trim all streams
-        List<String> keys = new ArrayList(streams.keySet());
-        keys.forEach(stream -> {
-          Optional<Long> minDelivered = !deleteAfterAcknowledge ? Optional.empty() :
-                  redisConnection.sync().xinfoGroups(stream)
-                          .stream().map(o -> XInfoGroup.fromXInfo(o, useProtoBuf))
-                          .map(xi -> {
-                            if (xi.getPending() > 0) {
-                              xi.considerPendingMessageId(redisConnection.sync()
-                                      .xpending(stream, xi.getName()).getMessageIds().getLower().getValue());
-                            }
-                            return xi.getLastDeliveredId();
-                          })
-                          .min(Comparator.comparing(Long::longValue));
-          if (minDelivered.isPresent()) {
-            long minDeliveredMillis = minDelivered.get();
-            String xtrimMinId = String.valueOf(minDeliveredMillis);
-            if (maxTtlInMillisConfig > 0 && maxTTLMillis > minDeliveredMillis) {
-              xtrimMinId = maxTTLId;
-            } else if (minTtlInMillisConfig > 0 && minTTLMillis < minDeliveredMillis) {
-              xtrimMinId = minTTLId;
-            }
-            long numTrimmed = redisConnection.sync().xtrim(stream, new XTrimArgs().minId(xtrimMinId));
-            if (numTrimmed > 0) {
-              logger.debug("{}: {} cleaned records", stream, numTrimmed);
-            }
-          } else if (maxTtlInMillisConfig > 0) {
-            long numTrimmed = redisConnection.sync().xtrim(stream, new XTrimArgs().minId(maxTTLId));
-            if (numTrimmed > 0) {
-              logger.debug("{}: {} cleaned records", stream, numTrimmed);
-            }
-          }
-        });
-      } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
-        logger.error("Error during cleanup due to possible Redis unavailability: ", ex.getMessage());
-      } catch (Exception ex) {
-        logger.error("Error during cleanup", ex);
-      } finally {
-        releaseCleanupLock();
-      }
-    }
+    redisCleaner.trimStreamValues();
     controller.scheduleCancellableTask(trimScheduleDelay, this::trimStreamValues);
-  }
-
-  private boolean acquireCleanupLock() {
-    try {
-      String id = UUID.randomUUID().toString();
-      Long now = System.currentTimeMillis();
-      // ProtoBuf format
-      if (useProtoBuf) {
-        // try to get lock
-        StatefulRedisConnection<String, byte[]> con = (StatefulRedisConnection<String, byte[]>) redisConnection;
-        con.sync().set(CLEANUP_LOCK, id.getBytes(StandardCharsets.UTF_8), SetArgs.Builder.nx().px(trimScheduleDelay));
-        byte[] getResult = con.sync().get(CLEANUP_LOCK);
-        if (getResult != null && getResult.length > 0 && id.equals(new String(getResult, StandardCharsets.UTF_8))) {
-          // lock successful: check last cleanup timestamp (autoscaled new Zeebe instances etc.)
-          byte[] lastCleanup = con.sync().get(CLEANUP_TIMESTAMP);
-          if (lastCleanup == null || lastCleanup.length == 0 ||
-                  Long.parseLong(new String(lastCleanup, StandardCharsets.UTF_8)) < now - trimScheduleDelay.toMillis()) {
-            con.sync().set(CLEANUP_TIMESTAMP, Long.toString(now).getBytes(StandardCharsets.UTF_8));
-            return true;
-          }
-        }
-      // JSON format
-      } else {
-        // try to get lock
-        StatefulRedisConnection<String, String> con = (StatefulRedisConnection<String, String>) redisConnection;
-        con.sync().set(CLEANUP_LOCK, id, SetArgs.Builder.nx().px(trimScheduleDelay));
-        if (id.equals(con.sync().get(CLEANUP_LOCK))) {
-          // lock successful: check last cleanup timestamp (autoscaled new Zeebe instances etc.)
-          String lastCleanup = con.sync().get(CLEANUP_TIMESTAMP);
-          if (lastCleanup == null || lastCleanup.isEmpty() || Long.parseLong(lastCleanup) < now - trimScheduleDelay.toMillis()) {
-            con.sync().set(CLEANUP_TIMESTAMP, Long.toString(now));
-            return true;
-          }
-        }
-      }
-    } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
-      logger.error("Error acquiring cleanup lock due to possible Redis unavailability: ", ex.getMessage());
-    } catch (Exception ex) {
-      logger.error("Error acquiring cleanup lock", ex);
-    }
-    return false;
-  }
-
-  private void releaseCleanupLock() {
-    try {
-      redisConnection.sync().del(CLEANUP_LOCK);
-    } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
-      logger.error("Error releasing cleanup lock due to possible Redis unavailability: ", ex.getMessage());
-    } catch (Exception ex) {
-      logger.error("Error releasing cleanup lock", ex);
-    }
   }
 }

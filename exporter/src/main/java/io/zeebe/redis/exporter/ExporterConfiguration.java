@@ -26,7 +26,11 @@ public class ExporterConfiguration {
 
   private boolean deleteAfterAcknowledge = false;
 
-  private int ioThreadPoolSize = Math.max(4, Runtime.getRuntime().availableProcessors());
+  private int ioThreadPoolSize = Math.max(2, Runtime.getRuntime().availableProcessors());
+
+  private int batchSize = 250;
+
+  private int batchCycleMillis = 500;
 
   public long getCleanupCycleInSeconds() {
     return getEnv("CLEANUP_CYCLE_IN_SECONDS").map(Long::parseLong).orElse(cleanupCycleInSeconds);
@@ -46,6 +50,14 @@ public class ExporterConfiguration {
 
   public int getIoThreadPoolSize() {
     return getEnv("IO_THREAD_POOL_SIZE").map(Integer::parseInt).orElse(ioThreadPoolSize);
+  }
+
+  public int getBatchSize() {
+    return getEnv("BATCH_SIZE").map(Integer::parseInt).orElse(batchSize);
+  }
+
+  public int getBatchCycleMillis() {
+    return getEnv("BATCH_CYCLE_MILLIS").map(Integer::parseInt).orElse(batchCycleMillis);
   }
 
   public String getFormat() {
@@ -88,6 +100,8 @@ public class ExporterConfiguration {
             ", maxTimeToLiveInSeconds=" + getMaxTimeToLiveInSeconds() +
             ", deleteAfterAcknowledge=" + isDeleteAfterAcknowledge() +
             ", ioThreadPoolSize=" + getIoThreadPoolSize() +
+            ", batchSize=" + getBatchSize() +
+            ", batchCycleMillis=" + getBatchCycleMillis() +
             ']';
   }
 }

@@ -30,6 +30,12 @@
             <artifactId>lettuce-core</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.12.0</version>
+        </dependency>
+
         <!-- test -->
         <dependency>
             <groupId>io.camunda</groupId>
