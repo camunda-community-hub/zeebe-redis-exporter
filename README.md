@@ -34,7 +34,7 @@ Add the Maven dependency to your `pom.xml`
 <dependency>
 	<groupId>io.zeebe.redis</groupId>
 	<artifactId>zeebe-redis-connector</artifactId>
-	<version>0.9.7</version>
+	<version>0.9.8</version>
 </dependency>
 ```
 
@@ -72,7 +72,6 @@ E.g. do something like
 ```
 
 #### Dealing with unstable connections
-*Since 0.9.1*
 
 The Lettuce based Redis client itself is able to automatically reconnect to the Redis server once the connection is lost.
 However there are network setups, where Lettuce cannot recover from such problems. In order to deal with these situations
@@ -86,7 +85,6 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
 ```
 
 #### Immediate deletion of successful handled messages
-*Since 0.9.1*
 
 If you want to deactivate the general cleanup of the exporter (see section "Configuration") and instead want
 to delete successful handled messages on client side the connector provides an optional setting:
@@ -134,7 +132,7 @@ var redisClient = RedisClient.create(
 A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
-docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.2.11-0.9.7
+docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.2.16-0.9.8
 ```
 
 For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter.
@@ -150,12 +148,12 @@ docker-compose up -d
 1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) _(camunda-zeebe-%{VERSION}.tar.gz
    )_
 
-1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-0.9.7-jar-with-dependencies.jar_)
+1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-0.9.8-jar-with-dependencies.jar_)
 
 1. Copy the exporter JAR  into the broker folder `~/zeebe-broker-%{VERSION}/exporters`.
 
     ```
-    cp exporter/target/zeebe-redis-exporter-0.9.7-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
+    cp exporter/target/zeebe-redis-exporter-0.9.8-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
     ```
 
 1. Add the exporter to the broker configuration `~/zeebe-broker-%{VERSION}/config/application.yaml`:
@@ -166,7 +164,7 @@ docker-compose up -d
         exporters:
           redis:
             className: io.zeebe.redis.exporter.RedisExporter
-            jarPath: exporters/zeebe-redis-exporter-0.9.7-jar-with-dependencies.jar
+            jarPath: exporters/zeebe-redis-exporter-0.9.8-jar-with-dependencies.jar
     ```
 
 1. Set the environment variable `ZEEBE_REDIS_REMOTE_ADDRESS` to your Redis URL.
@@ -186,6 +184,7 @@ In the Zeebe configuration, you can furthermore change
 * the minimum time-to-live of exported records
 * the maximum time-to-live of exported records
 * a flag indicating whether to delete acknowledged messages
+* batch size and cycle
 * the record serialization format
 
 Default values:
@@ -254,7 +253,7 @@ networks:
 services:
   zeebe:
     container_name: zeebe_broker
-    image: camunda/zeebe:8.2.15
+    image: camunda/zeebe:8.2.16
     environment:
       - ZEEBE_LOG_LEVEL=debug
       - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
@@ -262,7 +261,7 @@ services:
       - "26500:26500"
       - "9600:9600"
     volumes:
-      - ../exporter/target/zeebe-redis-exporter-0.9.7-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
+      - ../exporter/target/zeebe-redis-exporter-0.9.8-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
       - ./application.yaml:/usr/local/zeebe/config/application.yaml
     networks:
       - zeebe_network
@@ -286,8 +285,6 @@ Check out the Redis documentation on how to [manage](https://redis.io/docs/manag
 
 #### Cleanup
 
-*Since 0.9.3*
-
 The cleanup mechanism consists of the following options:
 
 | **Parameter**                              | **Description**                                                                                                                                     |
@@ -305,12 +302,7 @@ The "delete-after-acknowledge" feature is based on the Redis `xinfogroups` comma
 If there are pending messages the algorithm will additionally consider the lowest ID of the Redis `xpending` command result in order to delete only acknowledged messages.
 Please be aware that messages must have been acknowledged by all known consumer groups in order to be cleaned up.
 
-Cleanup is synchronized between different Zeebe nodes so that the cleanup does not run multiple times on each node but only once (since 0.9.4).
-
-*Version 0.9.2 and older*
-
-Version 0.9.2 comes with a single cleanup parameter `ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS`
-which is equal to the `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS` since version 0.9.3.
+Cleanup is synchronized between different Zeebe nodes so that the cleanup does not run multiple times on each node but only once.
 
 #### Tuning exporter performance
 
