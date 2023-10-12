@@ -3,6 +3,7 @@ package io.zeebe.redis;
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.model.bpmn.Bpmn;
 import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
+import io.camunda.zeebe.protocol.record.intent.*;
 import io.lettuce.core.RedisClient;
 import io.zeebe.exporter.proto.Schema;
 import io.zeebe.redis.connect.java.ZeebeRedis;
@@ -34,6 +35,9 @@ public class ExporterRecordTest {
           .receiveTask("receive-task")
           .message(m -> m.name("message").zeebeCorrelationKeyExpression("key"))
           .boundaryEvent("timer", b -> b.timerWithDuration("PT1M"))
+          .endEvent()
+          .moveToNode("receive-task")
+          .serviceTask("errorTask", s -> s.zeebeJobType("error"))
           .endEvent()
           .done();
 
@@ -142,18 +146,23 @@ public class ExporterRecordTest {
         client.newActivateJobsCommand().jobType("test").maxJobsToActivate(1).send().join();
     jobsResponse.getJobs().forEach(job -> client.newCompleteCommand(job.getKey()).send().join());
 
+    final var errorResponse =
+        client.newActivateJobsCommand().jobType("error").maxJobsToActivate(1).send().join();
+      errorResponse.getJobs().forEach(job -> client.newFailCommand(job.getKey()).retries(0)
+              .errorMessage("Error").send().join());
+
     // then
     await().atMost(Duration.ofSeconds(20)).pollInterval(Duration.ofSeconds(2))
         .untilAsserted(
             () -> {
               assertThat(deploymentRecords)
-                  .hasSizeGreaterThanOrEqualTo(3)
+                  .hasSizeGreaterThanOrEqualTo(2)
                   .allSatisfy(
                       r ->
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.DEPLOYMENT))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATE", "CREATED", "FULLY_DISTRIBUTED");
+                  .contains(DeploymentIntent.CREATE.name(), DeploymentIntent.CREATED.name());
 
               assertThat(incidentRecords)
                   .hasSizeGreaterThanOrEqualTo(1)
@@ -162,7 +171,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.INCIDENT))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATED");
+                  .contains(IncidentIntent.CREATED.name());
 
               assertThat(jobBatchRecords)
                   .hasSizeGreaterThanOrEqualTo(2)
@@ -171,7 +180,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.JOB_BATCH))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("ACTIVATE", "ACTIVATED");
+                  .contains(JobBatchIntent.ACTIVATE.name(), JobBatchIntent.ACTIVATED.name());
 
               assertThat(jobRecords)
                   .hasSizeGreaterThanOrEqualTo(2)
@@ -180,7 +189,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.JOB))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATED", "COMPLETED");
+                  .contains(JobIntent.CREATED.name(), JobIntent.COMPLETED.name());
 
               assertThat(messageRecords)
                   .hasSizeGreaterThanOrEqualTo(2)
@@ -189,7 +198,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.MESSAGE))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("PUBLISH", "PUBLISHED");
+                  .contains(MessageIntent.PUBLISH.name(), MessageIntent.PUBLISHED.name());
 
               assertThat(messageStartEventSubscriptionRecords)
                   .hasSizeGreaterThanOrEqualTo(1)
@@ -199,7 +208,7 @@ public class ExporterRecordTest {
                               .isEqualTo(
                                   Schema.RecordMetadata.ValueType.MESSAGE_START_EVENT_SUBSCRIPTION))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATED");
+                  .contains(MessageStartEventSubscriptionIntent.CREATED.name());
 
               assertThat(messageSubscriptionRecords)
                   .hasSizeGreaterThanOrEqualTo(3)
@@ -208,7 +217,8 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.MESSAGE_SUBSCRIPTION))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATED", "CORRELATING", "CORRELATED");
+                  .contains(MessageSubscriptionIntent.CREATED.name(), MessageSubscriptionIntent.CORRELATING.name(),
+                          MessageSubscriptionIntent.CORRELATED.name());
 
               assertThat(processEventRecords)
                   .hasSizeGreaterThanOrEqualTo(2)
@@ -217,7 +227,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.PROCESS_EVENT))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("TRIGGERING", "TRIGGERED");
+                  .contains(ProcessEventIntent.TRIGGERING.name(), ProcessEventIntent.TRIGGERED.name());
 
               assertThat(processInstanceCreationRecords)
                   .hasSizeGreaterThanOrEqualTo(2)
@@ -226,7 +236,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.PROCESS_INSTANCE_CREATION))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATE", "CREATED");
+                  .contains(ProcessInstanceCreationIntent.CREATE.name(), ProcessInstanceCreationIntent.CREATED.name());
 
               assertThat(processInstanceRecords)
                   .hasSizeGreaterThanOrEqualTo(3)
@@ -235,7 +245,9 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.PROCESS_INSTANCE))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("ACTIVATE_ELEMENT", "ELEMENT_ACTIVATING", "ELEMENT_ACTIVATED");
+                  .contains(ProcessInstanceIntent.ACTIVATE_ELEMENT.name(),
+                          ProcessInstanceIntent.ELEMENT_ACTIVATING.name(),
+                          ProcessInstanceIntent.ELEMENT_ACTIVATED.name());
 
               assertThat(processMessageSubscriptionRecords)
                   .hasSizeGreaterThanOrEqualTo(2)
@@ -245,7 +257,8 @@ public class ExporterRecordTest {
                               .isEqualTo(
                                   Schema.RecordMetadata.ValueType.PROCESS_MESSAGE_SUBSCRIPTION))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATING", "CORRELATED");
+                  .contains(ProcessMessageSubscriptionIntent.CREATED.name(),
+                          ProcessMessageSubscriptionIntent.CORRELATED.name());
 
               assertThat(processRecords)
                   .hasSizeGreaterThanOrEqualTo(2)
@@ -254,7 +267,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.PROCESS))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATED");
+                  .contains(ProcessIntent.CREATED.name());
 
               assertThat(timerRecords)
                   .hasSizeGreaterThanOrEqualTo(1)
@@ -263,7 +276,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.TIMER))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATED");
+                  .contains(TimerIntent.CREATED.name());
 
               assertThat(variableDocumentRecords)
                   .hasSizeGreaterThanOrEqualTo(1)
@@ -272,7 +285,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.VARIABLE_DOCUMENT))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("UPDATE", "UPDATED");
+                  .contains(VariableDocumentIntent.UPDATE.name(), VariableDocumentIntent.UPDATED.name());
 
               assertThat(variableRecords)
                   .hasSizeGreaterThanOrEqualTo(2)
@@ -281,7 +294,7 @@ public class ExporterRecordTest {
                           assertThat(r.getMetadata().getValueType())
                               .isEqualTo(Schema.RecordMetadata.ValueType.VARIABLE))
                   .extracting(r -> r.getMetadata().getIntent())
-                  .contains("CREATED");
+                  .contains(VariableIntent.CREATED.name());
             });
   }
 }

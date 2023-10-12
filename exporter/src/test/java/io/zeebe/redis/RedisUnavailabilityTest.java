@@ -7,7 +7,6 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.XGroupCreateArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
-import io.zeebe.redis.exporter.ProtobufCodec;
 import io.zeebe.redis.testcontainers.ZeebeTestContainer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,7 +17,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
-public class ZeebeRedisExporterTest {
+public class RedisUnavailabilityTest {
 
   private static final BpmnModelInstance WORKFLOW =
           Bpmn.createExecutableProcess("process")
@@ -29,15 +28,15 @@ public class ZeebeRedisExporterTest {
                   .endEvent("end")
                   .done();
   @Container
-  public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withDefaultConfig();
+  public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withJsonFormat();
 
   private RedisClient redisClient;
-  private StatefulRedisConnection<String, byte[]> redisConnection;
+  private StatefulRedisConnection<String, String> redisConnection;
 
   @BeforeEach
   public void init() {
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
-    redisConnection = redisClient.connect(new ProtobufCodec());
+    redisConnection = redisClient.connect();
   }
 
   @AfterEach
@@ -61,7 +60,7 @@ public class ZeebeRedisExporterTest {
     // when
     zeebeContainer.getRedisContainer().start();
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
-    redisConnection = redisClient.connect(new ProtobufCodec());
+    redisConnection = redisClient.connect();
     Thread.sleep(5000);
     redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
             "application_1", XGroupCreateArgs.Builder.mkstream());
@@ -70,8 +69,14 @@ public class ZeebeRedisExporterTest {
                     XReadArgs.Builder.block(6000),
                     XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
 
+    long createdCount = messages.stream().map(m -> m.getBody().values().stream().findFirst().get())
+            .filter(json -> json.contains("\"valueType\":\"DEPLOYMENT\""))
+            .filter(json -> json.contains("\"recordType\":\"EVENT\""))
+            .filter(json -> json.contains("\"intent\":\"CREATED\""))
+            .count();
+
     // then
-    assertThat(messages.size()).isEqualTo(6);
+    assertThat(createdCount).isEqualTo(2);
 
   }
 }

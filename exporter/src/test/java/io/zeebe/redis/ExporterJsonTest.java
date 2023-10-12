@@ -4,6 +4,8 @@ import io.camunda.zeebe.model.bpmn.Bpmn;
 import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
 import io.lettuce.core.Range;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.XGroupCreateArgs;
+import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.zeebe.redis.exporter.ExporterConfiguration;
 import io.zeebe.redis.testcontainers.ZeebeTestContainer;
@@ -50,9 +52,10 @@ public class ExporterJsonTest {
 
 
     @Test
-    public void shouldExportEventsAsJson() {
+    public void shouldExportEventsAsJson() throws Exception {
         // given
         zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process.bpmn").send().join();
+        Thread.sleep(1000);
 
         // when
         final var message = redisConnection.sync()

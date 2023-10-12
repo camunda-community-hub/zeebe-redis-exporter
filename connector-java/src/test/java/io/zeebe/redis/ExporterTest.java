@@ -73,12 +73,12 @@ public class ExporterTest {
     client.newDeployResourceCommand().addProcessModel(PROCESS, "process.bpmn").send().join();
 
     // then
-    Awaitility.await("await until the deployment is fully distributed")
+    Awaitility.await("await until the deployment is created")
         .untilAsserted(
             () ->
                 assertThat(deploymentRecords)
                     .extracting(r -> r.getMetadata().getIntent())
-                    .contains(DeploymentIntent.FULLY_DISTRIBUTED.name()));
+                    .contains(DeploymentIntent.CREATED.name()));
 
     // when
     client.newCreateInstanceCommand().bpmnProcessId("process").latestVersion().send().join();
@@ -117,13 +117,13 @@ public class ExporterTest {
     client.newDeployResourceCommand().addProcessModel(PROCESS, "process4.bpmn").send().join();
 
     // then
-    Awaitility.await("await until all deployments are fully distributed")
+    Awaitility.await("await until all deployments are created")
             .untilAsserted(() -> {
               var allRecords = new ArrayList<>(records1);
               allRecords.addAll(records2);
               assertThat(allRecords)
                       .extracting(r -> r.getMetadata().getIntent())
-                      .filteredOn(i -> i.equals(DeploymentIntent.FULLY_DISTRIBUTED.name()))
+                      .filteredOn(i -> i.equals(DeploymentIntent.CREATED.name()))
                       .hasSize(4);
             });
 

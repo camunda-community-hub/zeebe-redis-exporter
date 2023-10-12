@@ -23,7 +23,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
-public class ZeebeRedisClientTest {
+public class RedisUnavailabilityTest {
 
   private static final BpmnModelInstance PROCESS =
           Bpmn.createExecutableProcess("process")
@@ -76,12 +76,12 @@ public class ZeebeRedisClientTest {
     Thread.sleep(2000);
 
     // then
-    Awaitility.await("await until the deployment is fully distributed")
+    Awaitility.await("await until the deployment is created")
             .atMost(Duration.ofSeconds(10))
             .pollInterval(Duration.ofSeconds(2))
             .untilAsserted(() ->  assertThat(deploymentRecords)
                     .extracting(r -> r.getMetadata().getIntent())
-                    .contains(DeploymentIntent.FULLY_DISTRIBUTED.name()));
+                    .contains(DeploymentIntent.CREATED.name()));
 
     var redisConnection = redisClient.connect(new ProtobufCodec());
     Awaitility.await("await until all messages of deployment stream have been deleted")

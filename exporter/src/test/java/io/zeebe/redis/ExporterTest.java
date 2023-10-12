@@ -50,6 +50,7 @@ public class ExporterTest {
   public void shouldExportEventsAsProtobuf() throws Exception {
     // given
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process.bpmn").send().join();
+    Thread.sleep(1000);
 
     // when
     final var message = redisConnection.sync()
@@ -71,7 +72,8 @@ public class ExporterTest {
   public void shouldSupportConsumerGroups() throws Exception {
     // given
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process.bpmn").send().join();
-    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"), "application_1");
+    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"), "application_1",
+            XGroupCreateArgs.Builder.mkstream());
     Thread.sleep(1000);
 
     // when
