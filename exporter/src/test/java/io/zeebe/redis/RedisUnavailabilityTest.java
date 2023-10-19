@@ -13,6 +13,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.shaded.org.awaitility.Awaitility;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -64,19 +67,24 @@ public class RedisUnavailabilityTest {
     Thread.sleep(5000);
     redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
             "application_1", XGroupCreateArgs.Builder.mkstream());
-    var messages = redisConnection.sync()
-            .xreadgroup(Consumer.from("application_1", "consumer_1"),
-                    XReadArgs.Builder.block(6000),
-                    XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
-
-    long createdCount = messages.stream().map(m -> m.getBody().values().stream().findFirst().get())
-            .filter(json -> json.contains("\"valueType\":\"DEPLOYMENT\""))
-            .filter(json -> json.contains("\"recordType\":\"EVENT\""))
-            .filter(json -> json.contains("\"intent\":\"CREATED\""))
-            .count();
 
     // then
-    assertThat(createdCount).isEqualTo(2);
+    Awaitility.await().pollInSameThread().pollInterval(Duration.ofSeconds(1))
+            .atMost(Duration.ofSeconds(20)).untilAsserted(() -> {
+
+      var messages = redisConnection.sync()
+              .xreadgroup(Consumer.from("application_1", "consumer_1"),
+                      XReadArgs.Builder.block(6000),
+                      XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
+
+      long createdCount = messages.stream().map(m -> m.getBody().values().stream().findFirst().get())
+              .filter(json -> json.contains("\"valueType\":\"DEPLOYMENT\""))
+              .filter(json -> json.contains("\"recordType\":\"EVENT\""))
+              .filter(json -> json.contains("\"intent\":\"CREATED\""))
+              .count();
+
+      assertThat(createdCount).isEqualTo(2);
+    });
 
   }
 }

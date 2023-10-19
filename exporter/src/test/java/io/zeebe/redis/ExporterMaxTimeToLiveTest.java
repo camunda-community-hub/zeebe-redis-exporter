@@ -12,6 +12,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.shaded.org.awaitility.Awaitility;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -65,6 +68,7 @@ public class ExporterMaxTimeToLiveTest {
     // then
     assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(deploymentLen);
     Thread.sleep(5000);
-    assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(0);
+    Awaitility.await().pollInSameThread().pollInterval(Duration.ofMillis(500)).atMost(Duration.ofSeconds(5))
+            .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(0));
   }
 }
