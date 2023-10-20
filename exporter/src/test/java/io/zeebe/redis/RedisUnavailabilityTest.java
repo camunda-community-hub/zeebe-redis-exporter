@@ -69,12 +69,12 @@ public class RedisUnavailabilityTest {
             "application_1", XGroupCreateArgs.Builder.mkstream());
 
     // then
-    Awaitility.await().pollInSameThread().pollInterval(Duration.ofSeconds(1))
-            .atMost(Duration.ofSeconds(20)).untilAsserted(() -> {
+    Awaitility.await().pollInterval(Duration.ofSeconds(1))
+            .atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
 
       var messages = redisConnection.sync()
               .xreadgroup(Consumer.from("application_1", "consumer_1"),
-                      XReadArgs.Builder.block(6000),
+                      XReadArgs.Builder.block(1000),
                       XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
 
       long createdCount = messages.stream().map(m -> m.getBody().values().stream().findFirst().get())

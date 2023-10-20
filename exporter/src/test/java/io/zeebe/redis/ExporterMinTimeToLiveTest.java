@@ -2,10 +2,7 @@ package io.zeebe.redis;
 
 import io.camunda.zeebe.model.bpmn.Bpmn;
 import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
-import io.lettuce.core.Consumer;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.StreamMessage;
-import io.lettuce.core.XReadArgs;
+import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.zeebe.redis.exporter.ProtobufCodec;
 import io.zeebe.redis.testcontainers.ZeebeTestContainer;
@@ -14,8 +11,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.shaded.org.awaitility.Awaitility;
+
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
 @Testcontainers
 public class ExporterMinTimeToLiveTest {
@@ -55,7 +56,8 @@ public class ExporterMinTimeToLiveTest {
     // given: some consumed and acknowledged messages
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-1.bpmn").send().join();
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-2.bpmn").send().join();
-    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"), "application_1");
+    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
+            "application_1", XGroupCreateArgs.Builder.mkstream());
     Thread.sleep(1000);
     var messages = redisConnection.sync()
             .xreadgroup(Consumer.from("application_1", "consumer_1"),
@@ -74,8 +76,9 @@ public class ExporterMinTimeToLiveTest {
     assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(xlen);
 
     // but will delete them after min TTL
-    Thread.sleep(3000);
-    assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen);
+    var delay = Duration.ofSeconds(3);
+    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).untilAsserted(() ->
+            assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen));
 
   }
 

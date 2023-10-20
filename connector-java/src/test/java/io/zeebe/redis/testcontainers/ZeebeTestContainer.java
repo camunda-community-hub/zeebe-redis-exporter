@@ -8,6 +8,8 @@ public class ZeebeTestContainer extends ZeebeContainer {
 
     private RedisContainer redisContainer;
 
+    private ZeebeClient zeebeClient;
+
     protected ZeebeTestContainer(RedisContainer redisContainer) {
         super(DockerImageName.parse("ghcr.io/camunda-community-hub/zeebe-with-redis-exporter"));
         withExposedPorts(26500,9600);
@@ -32,10 +34,13 @@ public class ZeebeTestContainer extends ZeebeContainer {
     }
 
     public ZeebeClient getClient() {
-        return ZeebeClient.newClientBuilder()
-                .gatewayAddress(getExternalGatewayAddress())
-                .usePlaintext()
-                .build();
+        if (zeebeClient == null) {
+            zeebeClient = ZeebeClient.newClientBuilder()
+                    .gatewayAddress(getExternalGatewayAddress())
+                    .usePlaintext()
+                    .build();
+        }
+        return zeebeClient;
     }
 
     @Override
@@ -50,6 +55,10 @@ public class ZeebeTestContainer extends ZeebeContainer {
 
     @Override
     public void stop() {
+        if (zeebeClient != null) {
+            zeebeClient.close();
+        }
+        zeebeClient = null;
         super.stop();
         if (redisContainer != null) {
             redisContainer.stop();

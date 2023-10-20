@@ -57,7 +57,8 @@ public class ExporterDeleteAfterAcknowledgeTest {
     // given: some consumed and acknowledged messages
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-1.bpmn").send().join();
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-2.bpmn").send().join();
-    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"), "application_1");
+    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
+            "application_1", XGroupCreateArgs.Builder.mkstream());
     Thread.sleep(1000);
     var messages = redisConnection.sync()
             .xreadgroup(Consumer.from("application_1", "consumer_1"),
@@ -83,7 +84,8 @@ public class ExporterDeleteAfterAcknowledgeTest {
     // given: some consumed but never acknowledged messages
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-1.bpmn").send().join();
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-2.bpmn").send().join();
-    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"), "application_2");
+    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
+            "application_2", XGroupCreateArgs.Builder.mkstream());
     Thread.sleep(1000);
     var messages = redisConnection.sync()
             .xreadgroup(Consumer.from("application_2", "consumer_2"),
@@ -105,8 +107,10 @@ public class ExporterDeleteAfterAcknowledgeTest {
     // given: messages consumed and acknowledged by only one of two consumer groups
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-1.bpmn").send().join();
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-2.bpmn").send().join();
-    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"), "application_3");
-    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"), "application_4");
+    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
+            "application_3", XGroupCreateArgs.Builder.mkstream());
+    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
+            "application_4", XGroupCreateArgs.Builder.mkstream());
     Thread.sleep(1000);
     var messages = redisConnection.sync()
             .xreadgroup(Consumer.from("application_3", "consumer_3"),
