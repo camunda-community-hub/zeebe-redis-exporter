@@ -12,10 +12,7 @@ import io.zeebe.exporter.proto.Schema;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +22,6 @@ public class RedisExporter implements Exporter {
 
   private ExporterConfiguration config;
   private Logger logger;
-  private Controller controller;
 
   private RedisClient redisClient;
   private StatefulRedisConnection<String, ?> cleanupConnection;
@@ -33,8 +29,6 @@ public class RedisExporter implements Exporter {
   private Function<Record, ?> recordTransformer;
 
   private boolean useProtoBuf = false;
-
-  private Duration trimScheduleDelay;
 
   private String streamPrefix;
 
@@ -44,9 +38,11 @@ public class RedisExporter implements Exporter {
 
   private RedisSender redisSender;
 
-  // The ExecutorService allows to schedule a regular send task independent of the actual load
-  // which controller.scheduleCancellableTask didn't do.
-  private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+  // The ExecutorService allows to schedule a regular task independent of the actual load
+  // which controller.scheduleCancellableTask sadly didn't do.
+  private ScheduledExecutorService senderThread = Executors.newSingleThreadScheduledExecutor();
+
+  private ScheduledExecutorService cleanerThread = Executors.newSingleThreadScheduledExecutor();
 
   @Override
   public void configure(Context context) {
@@ -55,7 +51,6 @@ public class RedisExporter implements Exporter {
 
     logger.info("Starting Redis exporter with configuration: {}", config);
 
-    trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
     streamPrefix = config.getName() + ":";
 
     final RecordFilter filter = new RecordFilter(config);
@@ -82,8 +77,6 @@ public class RedisExporter implements Exporter {
 
   @Override
   public void open(Controller controller) {
-    this.controller = controller;
-
     if (config.getRemoteAddress().isEmpty()) {
       throw new IllegalStateException("Missing ZEEBE_REDIS_REMOTE_ADDRESS configuration.");
     }
@@ -96,22 +89,23 @@ public class RedisExporter implements Exporter {
     logger.info("Successfully connected Redis exporter to {}", config.getRemoteAddress().get());
 
     redisSender = new RedisSender(config, controller, senderConnection, logger);
-    executor.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
+    senderThread.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
 
     redisCleaner = new RedisCleaner(cleanupConnection, useProtoBuf, config, logger);
     if (config.getCleanupCycleInSeconds() > 0 &&
             (config.isDeleteAfterAcknowledge() || config.getMaxTimeToLiveInSeconds() > 0)) {
-      controller.scheduleCancellableTask(trimScheduleDelay, this::trimStreamValues);
+      cleanerThread.schedule(this::trimStreamValues, config.getCleanupCycleInSeconds(), TimeUnit.SECONDS);
     }
   }
 
   @Override
   public void close() {
-    executor.shutdown();
+    senderThread.shutdown();
     if (senderConnection != null) {
       senderConnection.close();
       senderConnection = null;
     }
+    cleanerThread.shutdown();
     if (cleanupConnection != null) {
       cleanupConnection.close();
       cleanupConnection = null;
@@ -130,7 +124,7 @@ public class RedisExporter implements Exporter {
 
   private void sendBatches() {
     redisSender.sendFrom(eventQueue);
-    executor.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
+    senderThread.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
   }
 
 
@@ -145,6 +139,6 @@ public class RedisExporter implements Exporter {
 
   private void trimStreamValues() {
     redisCleaner.trimStreamValues();
-    controller.scheduleCancellableTask(trimScheduleDelay, this::trimStreamValues);
+    cleanerThread.schedule(this::trimStreamValues, config.getCleanupCycleInSeconds(), TimeUnit.SECONDS);
   }
 }
