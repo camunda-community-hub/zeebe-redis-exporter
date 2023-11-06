@@ -19,7 +19,7 @@
         <version.lettuce>6.2.6.RELEASE</version.lettuce>
         <version.log4j>2.21.1</version.log4j>
         <version.zeebe.testcontainers>3.6.0</version.zeebe.testcontainers>
-        <version.junit>5.10.0</version.junit>
+        <version.junit>5.10.1</version.junit>
         <version.testcontainers>1.19.1</version.testcontainers>
 
         <plugin.version.maven-jar>3.3.0</plugin.version.maven-jar>
