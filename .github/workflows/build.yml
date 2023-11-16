@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   pull_request:
   schedule:
-    - cron: '2 2 * * 1-5' # run nightly main builds on weekdays
+    - cron: '42 6 * * 1-5' # run nightly main builds on weekdays
 
 jobs:
   build:
