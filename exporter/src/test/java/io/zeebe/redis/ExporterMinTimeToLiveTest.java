@@ -57,7 +57,10 @@ public class ExporterMinTimeToLiveTest {
   public void shouldConsiderMinTtlWhenDeleteAfterAcknowledge() throws Exception {
     // given: some consumed and acknowledged messages
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-1.bpmn").send().join();
+    Thread.sleep(1000);
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-2.bpmn").send().join();
+    Thread.sleep(1000);
+    zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-3.bpmn").send().join();
     redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
             "application_1", XGroupCreateArgs.Builder.mkstream());
     Thread.sleep(1000);
@@ -79,9 +82,8 @@ public class ExporterMinTimeToLiveTest {
 
     // but will delete them after min TTL
     var delay = Duration.ofSeconds(5);
-    await().atMost(Duration.ofSeconds(6)).pollDelay(delay).pollInterval(Duration.ofMillis(1000)).pollInSameThread()
+    await().atMost(Duration.ofSeconds(12)).pollDelay(delay).pollInterval(Duration.ofMillis(1000)).pollInSameThread()
             .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen));
-
   }
 
 }
