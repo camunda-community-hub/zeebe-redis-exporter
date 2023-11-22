@@ -15,15 +15,15 @@ on:
     types: [published]
 jobs:
   publish:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Java environment
         uses: actions/setup-java@v3
         with:
           java-version: 17
-          distribution: zulu
+          distribution: temurin
           cache: maven
           gpg-private-key: ${{ secrets.MAVEN_CENTRAL_GPG_SIGNING_KEY_SEC }}
           gpg-passphrase: MAVEN_CENTRAL_GPG_PASSPHRASE
