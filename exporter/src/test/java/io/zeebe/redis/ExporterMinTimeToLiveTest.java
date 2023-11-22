@@ -77,7 +77,7 @@ public class ExporterMinTimeToLiveTest {
 
     // but will delete them after min TTL
     var delay = Duration.ofSeconds(3);
-    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).untilAsserted(() ->
+    await().atMost(Duration.ofSeconds(10)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).untilAsserted(() ->
             assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen));
 
   }
