@@ -34,7 +34,7 @@ public class ExporterMinTimeToLiveTest {
 
   @Container
   public ZeebeTestContainer zeebeContainer = ZeebeTestContainer
-          .withCleanupCycleInSeconds(2).doDeleteAfterAcknowledge(true).withMinTTLInSeconds(5);
+          .withCleanupCycleInSeconds(3).doDeleteAfterAcknowledge(true).withMinTTLInSeconds(10);
 
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;
@@ -72,14 +72,14 @@ public class ExporterMinTimeToLiveTest {
     };
 
     // when: cleanupHasRun but min TTL has not been reached
-    Thread.sleep(3000);
+    Thread.sleep(6000);
 
     // then: cleanup did not yet remove the messages
     assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(xlen);
 
     // but will delete them after min TTL
-    var delay = Duration.ofSeconds(3);
-    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).pollInSameThread()
+    var delay = Duration.ofSeconds(5);
+    await().atMost(Duration.ofSeconds(6)).pollDelay(delay).pollInterval(Duration.ofMillis(1000)).pollInSameThread()
             .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen));
 
   }
