@@ -24,21 +24,5 @@ jobs:
 #        with:
 #          token: ${{ secrets.TC_CLOUD_TOKEN }}
 
-      - name: Dump Zeebe logs
-        uses: jwalton/gh-docker-logs@v2
-        with:
-          images: 'zeebe-with-redis-exporter'
-          dest: './logs'
-          
       - name: Run Maven
         run: mvn -B clean verify com.mycila:license-maven-plugin:check
-
-      - name: Tar logs
-        if: failure()
-        run: tar cvzf ./logs.tgz ./logs
-      - name: Upload logs to GitHub
-        if: failure()
-        uses: actions/upload-artifact@master
-        with:
-          name: logs.tgz
-          path: ./logs.tgz
