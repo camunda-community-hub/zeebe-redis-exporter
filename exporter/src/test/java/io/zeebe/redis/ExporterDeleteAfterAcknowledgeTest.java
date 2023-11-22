@@ -74,7 +74,7 @@ public class ExporterDeleteAfterAcknowledgeTest {
     var delay = Duration.ofSeconds(3);
 
     // then: cleanup removed all messages except the last ones
-    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500))
+    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).pollInSameThread()
             .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen));
 
   }
@@ -98,7 +98,7 @@ public class ExporterDeleteAfterAcknowledgeTest {
     var delay = Duration.ofSeconds(3);
 
     // then: cleanup did not remove messages
-    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500))
+    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).pollInSameThread()
             .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isGreaterThanOrEqualTo(xlen));
   }
 
