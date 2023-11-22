@@ -2,10 +2,16 @@ package io.zeebe.redis.testcontainers;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import io.zeebe.containers.ZeebeContainer;
+import org.slf4j.LoggerFactory;
 import org.testcontainers.shaded.org.awaitility.Awaitility;
 import org.testcontainers.utility.DockerImageName;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class ZeebeTestContainer extends ZeebeContainer {
+
+    private static final Logger LOGGER = Logger.getLogger("ZeebeTestContainer");
 
     private RedisContainer redisContainer;
 
@@ -86,5 +92,12 @@ public class ZeebeTestContainer extends ZeebeContainer {
 
     public String getRedisAddress() {
         return "redis://" + redisContainer.getRedisServerExternalAddress();
+    }
+
+    public void writeContainerLogs() {
+        var prefix = "\n----------------------------------------------------------------------"
+        + "\nZeebe container log:"
+        + "\n----------------------------------------------------------------------\n";
+        LOGGER.log(Level.WARNING, prefix + getLogs());
     }
 }

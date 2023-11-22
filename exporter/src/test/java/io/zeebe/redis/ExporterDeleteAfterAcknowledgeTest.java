@@ -7,10 +7,12 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.zeebe.exporter.proto.Schema;
 import io.zeebe.redis.exporter.ProtobufCodec;
 import io.zeebe.redis.exporter.XInfoGroup;
+import io.zeebe.redis.testcontainers.OnFailureExtension;
 import io.zeebe.redis.testcontainers.ZeebeTestContainer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -35,11 +37,15 @@ public class ExporterDeleteAfterAcknowledgeTest {
   public ZeebeTestContainer zeebeContainer = ZeebeTestContainer
           .withCleanupCycleInSeconds(2).doDeleteAfterAcknowledge(true);
 
+  @RegisterExtension
+  static OnFailureExtension onFailureExtension = new OnFailureExtension();
+
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;
 
   @BeforeEach
   public void init() {
+    onFailureExtension.setZeebeTestContainer(zeebeContainer);
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
     redisConnection = redisClient.connect(new ProtobufCodec());
     redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);

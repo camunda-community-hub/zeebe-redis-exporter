@@ -8,10 +8,12 @@ import io.lettuce.core.XGroupCreateArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.zeebe.redis.exporter.ExporterConfiguration;
+import io.zeebe.redis.testcontainers.OnFailureExtension;
 import io.zeebe.redis.testcontainers.ZeebeTestContainer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -29,16 +31,18 @@ public class ExporterJsonTest {
                     .endEvent("end")
                     .done();
 
-    private static final ExporterConfiguration CONFIGURATION = new ExporterConfiguration();
-
     @Container
     public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withJsonFormat();
+
+    @RegisterExtension
+    static OnFailureExtension onFailureExtension = new OnFailureExtension();
 
     private RedisClient redisClient;
     private StatefulRedisConnection<String, String> redisConnection;
 
     @BeforeEach
     public void init() {
+        onFailureExtension.setZeebeTestContainer(zeebeContainer);
         redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
         redisConnection = redisClient.connect();
         redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);
