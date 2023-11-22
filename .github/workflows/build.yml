@@ -23,16 +23,16 @@ jobs:
 #        uses: atomicjar/testcontainers-cloud-setup-action@v1
 #        with:
 #          token: ${{ secrets.TC_CLOUD_TOKEN }}
-          
-      - name: Run Maven
-        run: mvn -B clean verify com.mycila:license-maven-plugin:check
-        
+
       - name: Dump Zeebe logs
-        if: failure()
         uses: jwalton/gh-docker-logs@v2
         with:
           images: 'zeebe-with-redis-exporter'
           dest: './logs'
+          
+      - name: Run Maven
+        run: mvn -B clean verify com.mycila:license-maven-plugin:check
+
       - name: Tar logs
         if: failure()
         run: tar cvzf ./logs.tgz ./logs
