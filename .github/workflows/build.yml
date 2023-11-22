@@ -27,16 +27,16 @@ jobs:
       - name: Run Maven
         run: mvn -B clean verify com.mycila:license-maven-plugin:check
         
-      - name: On Failure: dump Zeebe logs
+      - name: [On Failure] Dump Zeebe logs
         if: failure()
         uses: jwalton/gh-docker-logs@v2
         with:
           images: 'ghcr.io/camunda-community-hub/zeebe-with-redis-exporter'
           dest: './logs'
-      - name: On Failure: Tar logs
+      - name: [On Failure] Tar logs
         if: failure()
         run: tar cvzf ./logs.tgz ./logs
-      - name: On Failure: Upload logs to GitHub
+      - name: [On Failure] Upload logs to GitHub
         if: failure()
         uses: actions/upload-artifact@master
         with:
