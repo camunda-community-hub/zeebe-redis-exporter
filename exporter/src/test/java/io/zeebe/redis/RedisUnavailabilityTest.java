@@ -40,6 +40,7 @@ public class RedisUnavailabilityTest {
   public void init() {
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
     redisConnection = redisClient.connect();
+    redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);
   }
 
   @AfterEach

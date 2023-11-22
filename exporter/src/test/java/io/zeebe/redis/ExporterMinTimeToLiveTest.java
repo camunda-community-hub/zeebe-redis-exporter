@@ -41,12 +41,12 @@ public class ExporterMinTimeToLiveTest {
   public void init() {
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
     redisConnection = redisClient.connect(new ProtobufCodec());
+    redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);
   }
 
   @AfterEach
   public void cleanUp() {
     redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);
-    redisConnection.sync().xtrim("zeebe:PROCESS", 0);
     redisConnection.close();
     redisClient.shutdown();
   }
@@ -77,8 +77,8 @@ public class ExporterMinTimeToLiveTest {
 
     // but will delete them after min TTL
     var delay = Duration.ofSeconds(3);
-    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).untilAsserted(() ->
-            assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen));
+    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).pollInSameThread()
+            .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isLessThan(xlen));
 
   }
 

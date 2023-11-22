@@ -37,6 +37,7 @@ public class ExporterTest {
   public void init() {
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
     redisConnection = redisClient.connect(new ProtobufCodec());
+    redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);
   }
 
   @AfterEach

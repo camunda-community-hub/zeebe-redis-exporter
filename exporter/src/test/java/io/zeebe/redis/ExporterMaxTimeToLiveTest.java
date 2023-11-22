@@ -68,7 +68,7 @@ public class ExporterMaxTimeToLiveTest {
     // then
     assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(deploymentLen);
     Thread.sleep(5000);
-    Awaitility.await().pollInSameThread().pollInterval(Duration.ofMillis(500)).atMost(Duration.ofSeconds(5))
+    Awaitility.await().pollInterval(Duration.ofMillis(500)).atMost(Duration.ofSeconds(5)).pollInSameThread()
             .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(0));
   }
 }

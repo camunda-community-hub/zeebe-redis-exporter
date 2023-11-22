@@ -42,12 +42,12 @@ public class ExporterDeleteAfterAcknowledgeTest {
   public void init() {
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
     redisConnection = redisClient.connect(new ProtobufCodec());
+    redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);
   }
 
   @AfterEach
   public void cleanUp() {
     redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);
-    redisConnection.sync().xtrim("zeebe:PROCESS", 0);
     redisConnection.close();
     redisClient.shutdown();
   }
@@ -132,7 +132,7 @@ public class ExporterDeleteAfterAcknowledgeTest {
     var delay = Duration.ofSeconds(3);
 
     // then: cleanup did not remove messages
-    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500))
+    await().atMost(Duration.ofSeconds(5)).pollDelay(delay).pollInterval(Duration.ofMillis(500)).pollInSameThread()
             .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isGreaterThanOrEqualTo(xlen));
 
   }
