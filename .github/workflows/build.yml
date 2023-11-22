@@ -31,7 +31,7 @@ jobs:
         if: failure()
         uses: jwalton/gh-docker-logs@v2
         with:
-          images: 'ghcr.io/camunda-community-hub/zeebe-with-redis-exporter'
+          images: 'zeebe-with-redis-exporter'
           dest: './logs'
       - name: Tar logs
         if: failure()
