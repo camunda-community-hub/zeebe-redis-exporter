@@ -10,7 +10,7 @@ import io.zeebe.redis.testcontainers.ZeebeTestContainer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.testcontainers.shaded.org.awaitility.Awaitility.await;
 
 @Testcontainers
+@ExtendWith(OnFailureExtension.class)
 public class ExporterMinTimeToLiveTest {
 
   private static final BpmnModelInstance WORKFLOW =
@@ -35,15 +36,11 @@ public class ExporterMinTimeToLiveTest {
   public ZeebeTestContainer zeebeContainer = ZeebeTestContainer
           .withCleanupCycleInSeconds(2).doDeleteAfterAcknowledge(true).withMinTTLInSeconds(5);
 
-  @RegisterExtension
-  static OnFailureExtension onFailureExtension = new OnFailureExtension();
-
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;
 
   @BeforeEach
   public void init() {
-    onFailureExtension.setZeebeTestContainer(zeebeContainer);
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
     redisConnection = redisClient.connect(new ProtobufCodec());
     redisConnection.sync().xtrim("zeebe:DEPLOYMENT", 0);

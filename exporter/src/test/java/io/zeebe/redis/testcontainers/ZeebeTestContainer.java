@@ -94,10 +94,4 @@ public class ZeebeTestContainer extends ZeebeContainer {
         return "redis://" + redisContainer.getRedisServerExternalAddress();
     }
 
-    public void writeContainerLogs() {
-        var prefix = "\n----------------------------------------------------------------------"
-        + "\nZeebe container log:"
-        + "\n----------------------------------------------------------------------\n";
-        LOGGER.log(Level.WARNING, prefix + getLogs());
-    }
 }
