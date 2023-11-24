@@ -37,6 +37,10 @@ public class RedisCleaner {
         trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
     }
 
+    public void setRedisConnection(StatefulRedisConnection<String, ?> redisConnection) {
+        this.redisConnection = redisConnection;
+    }
+
     public void considerStream(String stream) {
         streams.put(stream, Boolean.TRUE);
     }

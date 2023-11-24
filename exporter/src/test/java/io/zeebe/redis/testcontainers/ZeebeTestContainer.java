@@ -2,11 +2,8 @@ package io.zeebe.redis.testcontainers;
 
 import io.camunda.zeebe.client.ZeebeClient;
 import io.zeebe.containers.ZeebeContainer;
-import org.slf4j.LoggerFactory;
-import org.testcontainers.shaded.org.awaitility.Awaitility;
 import org.testcontainers.utility.DockerImageName;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ZeebeTestContainer extends ZeebeContainer {
@@ -34,20 +31,24 @@ public class ZeebeTestContainer extends ZeebeContainer {
         return container;
     }
 
-    public ZeebeTestContainer withMaxTTLInSeconds(long maxTimeToLiveInSeconds) {
+    public ZeebeTestContainer andUseMaxTTLInSeconds(long maxTimeToLiveInSeconds) {
         withEnv("ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS", Long.toString(maxTimeToLiveInSeconds));
         return this;
     }
 
-    public ZeebeTestContainer withMinTTLInSeconds(long minTimeToLiveInSeconds) {
+    public ZeebeTestContainer andUseMinTTLInSeconds(long minTimeToLiveInSeconds) {
         withEnv("ZEEBE_REDIS_MIN_TIME_TO_LIVE_IN_SECONDS", Long.toString(minTimeToLiveInSeconds));
         return this;
     }
 
     public static ZeebeTestContainer withCleanupCycleInSeconds(long cleanupCycleInSeconds) {
         ZeebeTestContainer container = withDefaultConfig();
-        container.withEnv("ZEEBE_REDIS_CLEANUP_CYCLE_IN_SECONDS", Long.toString(cleanupCycleInSeconds));
-        return container;
+        return container.andUseCleanupCycleInSeconds(cleanupCycleInSeconds);
+    }
+
+    public ZeebeTestContainer andUseCleanupCycleInSeconds(long cleanupCycleInSeconds) {
+        withEnv("ZEEBE_REDIS_CLEANUP_CYCLE_IN_SECONDS", Long.toString(cleanupCycleInSeconds));
+        return this;
     }
     public ZeebeTestContainer doDeleteAfterAcknowledge(boolean deleteAfterAcknowledge) {
         withEnv("ZEEBE_REDIS_DELETE_AFTER_ACKNOWLEDGE", Boolean.toString(deleteAfterAcknowledge));
@@ -72,6 +73,10 @@ public class ZeebeTestContainer extends ZeebeContainer {
             withEnv("ZEEBE_REDIS_REMOTE_ADDRESS", "redis://" + redisContainer.getRedisServerAddress());
         }
         super.start();
+    }
+
+    public void restartWithoutRedis() {
+        super.doStart();
     }
 
     @Override

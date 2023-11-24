@@ -34,7 +34,7 @@ public class ExporterMinTimeToLiveTest {
 
   @Container
   public ZeebeTestContainer zeebeContainer = ZeebeTestContainer
-          .withCleanupCycleInSeconds(3).doDeleteAfterAcknowledge(true).withMinTTLInSeconds(10);
+          .withCleanupCycleInSeconds(3).doDeleteAfterAcknowledge(true).andUseMinTTLInSeconds(10);
 
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;

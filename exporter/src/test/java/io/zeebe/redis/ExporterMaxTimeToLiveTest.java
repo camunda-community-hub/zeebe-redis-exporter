@@ -35,7 +35,7 @@ public class ExporterMaxTimeToLiveTest {
 
   @Container
   public ZeebeTestContainer zeebeContainer = ZeebeTestContainer
-          .withCleanupCycleInSeconds(2).withMaxTTLInSeconds(6);
+          .withCleanupCycleInSeconds(2).andUseMaxTTLInSeconds(6);
 
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;

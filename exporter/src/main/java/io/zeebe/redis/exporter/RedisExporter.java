@@ -13,6 +13,8 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -38,11 +40,18 @@ public class RedisExporter implements Exporter {
 
   private RedisSender redisSender;
 
+  private Controller controller;
+
   // The ExecutorService allows to schedule a regular task independent of the actual load
   // which controller.scheduleCancellableTask sadly didn't do.
   private ScheduledExecutorService senderThread = Executors.newSingleThreadScheduledExecutor();
 
   private ScheduledExecutorService cleanerThread = Executors.newSingleThreadScheduledExecutor();
+
+  // Startup handling in case of Redis connection failure
+  private ScheduledExecutorService startupThread;
+  private boolean fullyLoggedStartupException = false;
+  private List<Integer> reconnectIntervals = new ArrayList<>(List.of(2,3,3,4,4,4,5));
 
   @Override
   public void configure(Context context) {
@@ -80,21 +89,59 @@ public class RedisExporter implements Exporter {
     if (config.getRemoteAddress().isEmpty()) {
       throw new IllegalStateException("Missing ZEEBE_REDIS_REMOTE_ADDRESS configuration.");
     }
+    this.controller = controller;
 
     redisClient = RedisClient.create(
             ClientResources.builder().ioThreadPoolSize(config.getIoThreadPoolSize()).build(),
             config.getRemoteAddress().get());
-    senderConnection = useProtoBuf ? redisClient.connect(new ProtobufCodec()) : redisClient.connect();
-    cleanupConnection = useProtoBuf ? redisClient.connect(new ProtobufCodec()) : redisClient.connect();
-    logger.info("Successfully connected Redis exporter to {}", config.getRemoteAddress().get());
+    connectToRedis();
+  }
 
-    redisSender = new RedisSender(config, controller, senderConnection, logger);
-    senderThread.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
+  private void connectToRedis() {
+    boolean failure = false;
+    // try to connect
+    try {
+      senderConnection = useProtoBuf ? redisClient.connect(new ProtobufCodec()) : redisClient.connect();
+      cleanupConnection = useProtoBuf ? redisClient.connect(new ProtobufCodec()) : redisClient.connect();
+      logger.info("Successfully connected Redis exporter to {}", config.getRemoteAddress().get());
+    } catch (RedisConnectionException ex) {
+      if (!fullyLoggedStartupException) {
+        logger.error("Failure connecting Redis exporter to " + config.getRemoteAddress().get(), ex);
+        fullyLoggedStartupException = true;
+      } else {
+        logger.warn("Failure connecting Redis exporter to {}: {}", config.getRemoteAddress().get(), ex.getMessage());
+      }
+      failure = true;
+    }
 
-    redisCleaner = new RedisCleaner(cleanupConnection, useProtoBuf, config, logger);
-    if (config.getCleanupCycleInSeconds() > 0 &&
-            (config.isDeleteAfterAcknowledge() || config.getMaxTimeToLiveInSeconds() > 0)) {
-      cleanerThread.schedule(this::trimStreamValues, config.getCleanupCycleInSeconds(), TimeUnit.SECONDS);
+    // upon successful connection initialize the sender
+    if (redisSender == null && senderConnection != null) {
+      redisSender = new RedisSender(config, controller, senderConnection, logger);
+      senderThread.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    // always initialize the cleaner
+    if (redisCleaner == null) {
+      redisCleaner = new RedisCleaner(cleanupConnection, useProtoBuf, config, logger);
+      if (config.getCleanupCycleInSeconds() > 0 &&
+              (config.isDeleteAfterAcknowledge() || config.getMaxTimeToLiveInSeconds() > 0)) {
+        cleanerThread.schedule(this::trimStreamValues, config.getCleanupCycleInSeconds(), TimeUnit.SECONDS);
+      }
+    // upon late successful connection propagate it to cleaner
+    } else if (cleanupConnection != null) {
+      redisCleaner.setRedisConnection(cleanupConnection);
+    }
+
+    // if initial connection has failed, try again later
+    if (failure) {
+      if (startupThread == null) {
+        startupThread = Executors.newSingleThreadScheduledExecutor();
+      }
+      int delay = reconnectIntervals.size() > 1 ? reconnectIntervals.remove(0) : reconnectIntervals.get(0);
+      startupThread.schedule(this::connectToRedis, delay, TimeUnit.SECONDS);
+    } else if (startupThread != null ) {
+      startupThread.shutdown();
+      startupThread = null;
     }
   }
 
