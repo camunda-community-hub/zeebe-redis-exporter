@@ -58,13 +58,17 @@ public class RedisUnavailabilityTest {
   @Test
   public void worksCorrectIfRedisIsTemporarilyUnavailable() throws Exception {
     // given
-    redisConnection.close();
-    redisClient.shutdown();
-    zeebeContainer.getRedisContainer().stop();
     WaitingConsumer consumer = new WaitingConsumer();
     zeebeContainer.followOutput(consumer);
     consumer.waitUntil(frame ->
-            frame.getUtf8String().contains("Connection refused: redis"), 10, TimeUnit.SECONDS);
+            frame.getUtf8String().contains("Successfully connected Redis exporter"), 10, TimeUnit.SECONDS);
+
+    redisConnection.close();
+    redisClient.shutdown();
+    zeebeContainer.getRedisContainer().stop();
+    consumer.waitUntil(frame ->
+            frame.getUtf8String().contains("Cannot reconnect to [redis"), 10, TimeUnit.SECONDS);
+
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process.bpmn").send().join();
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process2.bpmn").send().join();
     Thread.sleep(1000);
