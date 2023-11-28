@@ -57,6 +57,7 @@ public class ExporterDeleteAfterAcknowledgeTest {
   public void shouldDeleteAfterAcknowledge() throws Exception {
     // given: some consumed and acknowledged messages
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-1.bpmn").send().join();
+    Thread.sleep(1000);
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-2.bpmn").send().join();
     redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
             "application_1", XGroupCreateArgs.Builder.mkstream());
@@ -84,6 +85,7 @@ public class ExporterDeleteAfterAcknowledgeTest {
   public void shouldNotDeleteWhenConsumedButNotAcknowledged() throws Exception {
     // given: some consumed but never acknowledged messages
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-1.bpmn").send().join();
+    Thread.sleep(1000);
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-2.bpmn").send().join();
     redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
             "application_2", XGroupCreateArgs.Builder.mkstream());
@@ -107,6 +109,7 @@ public class ExporterDeleteAfterAcknowledgeTest {
   public void shouldNotDeleteWhenNotAcknowledgedByAllGroups() throws Exception {
     // given: messages consumed and acknowledged by only one of two consumer groups
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-1.bpmn").send().join();
+    Thread.sleep(1000);
     zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process-2.bpmn").send().join();
     redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
             "application_3", XGroupCreateArgs.Builder.mkstream());
