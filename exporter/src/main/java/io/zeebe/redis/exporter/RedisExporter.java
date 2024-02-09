@@ -4,15 +4,15 @@ import io.camunda.zeebe.exporter.api.Exporter;
 import io.camunda.zeebe.exporter.api.context.Context;
 import io.camunda.zeebe.exporter.api.context.Controller;
 import io.camunda.zeebe.protocol.record.Record;
-import io.lettuce.core.*;
-import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.RedisClient;
+import io.lettuce.core.RedisConnectionException;
+import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.resource.ClientResources;
 import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -25,9 +25,9 @@ public class RedisExporter implements Exporter {
   private ExporterConfiguration config;
   private Logger logger;
 
-  private RedisClient redisClient;
-  private StatefulRedisConnection<String, ?> cleanupConnection;
-  private StatefulRedisConnection<String, ?> senderConnection;
+  private UniversalRedisClient redisClient;
+  private UniversalRedisConnection<String, ?> cleanupConnection;
+  private UniversalRedisConnection<String, ?> senderConnection;
   private Function<Record, ?> recordTransformer;
 
   private boolean useProtoBuf = false;
@@ -91,9 +91,15 @@ public class RedisExporter implements Exporter {
     }
     this.controller = controller;
 
-    redisClient = RedisClient.create(
-            ClientResources.builder().ioThreadPoolSize(config.getIoThreadPoolSize()).build(),
-            config.getRemoteAddress().get());
+    if (config.isUseClusterClient()) {
+        redisClient = new UniversalRedisClient(RedisClusterClient.create(
+                ClientResources.builder().ioThreadPoolSize(config.getIoThreadPoolSize()).build(),
+                config.getRemoteAddress().get()));
+    } else {
+        redisClient = new UniversalRedisClient(RedisClient.create(
+                ClientResources.builder().ioThreadPoolSize(config.getIoThreadPoolSize()).build(),
+                config.getRemoteAddress().get()));
+    }
     connectToRedis();
   }
 

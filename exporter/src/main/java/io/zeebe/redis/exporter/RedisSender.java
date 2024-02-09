@@ -2,8 +2,7 @@ package io.zeebe.redis.exporter;
 
 import io.camunda.zeebe.exporter.api.context.Controller;
 import io.lettuce.core.*;
-import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.async.RedisAsyncCommands;
+import io.lettuce.core.api.async.RedisStreamAsyncCommands;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 
@@ -17,7 +16,7 @@ public class RedisSender {
 
     private final Logger logger;
     private final Controller controller;
-    private final StatefulRedisConnection<String, ?> redisConnection;
+    private final UniversalRedisConnection<String, ?> redisConnection;
 
     private final AtomicBoolean redisConnected = new AtomicBoolean(true);
 
@@ -25,7 +24,7 @@ public class RedisSender {
 
     private final List<ImmutablePair<Long, RedisEvent>> deQueue = new ArrayList<>();
 
-    public RedisSender(ExporterConfiguration configuration, Controller controller, StatefulRedisConnection<String, ?> redisConnection, Logger logger) {
+    public RedisSender(ExporterConfiguration configuration, Controller controller, UniversalRedisConnection<String, ?> redisConnection, Logger logger) {
         this.batchSize = configuration.getBatchSize();
         this.controller = controller;
         this.redisConnection = redisConnection;
@@ -50,7 +49,7 @@ public class RedisSender {
         }
         try {
             Long positionOfLastRecordInBatch = -1L;
-            RedisAsyncCommands<String, ?> commands = redisConnection.async();
+            RedisStreamAsyncCommands<String, ?> commands = redisConnection.asyncStreamCommands();
             List<RedisFuture<?>> futures = new ArrayList<>();
             ImmutablePair<Long, RedisEvent> nextEvent = eventQueue.getNextEvent();
             while (nextEvent != null) {
@@ -91,7 +90,7 @@ public class RedisSender {
         }
         try {
             Long positionOfLastRecordInBatch = -1L;
-            RedisAsyncCommands<String, ?> commands = redisConnection.async();
+            RedisStreamAsyncCommands<String, ?> commands = redisConnection.asyncStreamCommands();
             List<RedisFuture<?>> futures = new ArrayList<>();
             for (var nextEvent : deQueue) {
                 var eventValue = nextEvent.getValue();

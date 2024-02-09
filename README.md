@@ -178,6 +178,7 @@ Setting the Redis remote address is mandatory.
 
 In the Zeebe configuration, you can furthermore change
 
+* whether to use a cluster client
 * the value and record types which are exported
 * the name resulting in a stream prefix
 * the cleanup cycle
@@ -200,6 +201,9 @@ zeebe:
           # Redis connection url (redis://...)
     	  # remoteAddress: 
    
+          # whether to use the Redis cluster client
+          useClusterClient: false
+          
           # comma separated list of io.zeebe.protocol.record.ValueType to export or empty to export all types 
           enabledValueTypes: ""
     
@@ -234,7 +238,7 @@ zeebe:
           format: "protobuf"
 ```
 
-The values can be overridden by environment variables with the same name and a `ZEEBE_REDIS_` prefix (e.g. `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS`). 
+The values can be overridden by environment variables with the same name and a `ZEEBE_REDIS_` prefix (e.g. `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS`, `ZEEBE_REDIS_USE_CLUSTER_CLIENT`, ...). 
 
 Especially when it comes to `ZEEBE_REDIS_REMOTE_ADDRESS` it is recommended to define it as environment variable
 and not within the more internal `application.yaml` configuration.
@@ -318,6 +322,36 @@ In order to tune the exporter performance you have the following options availab
 
 The exporter queues records and sends them every `ZEEBE_REDIS_BATCH_CYCLE_MILLIS`. Sending data then does not use the default auto-flush / flush-after-write mode of Lettuce but groups multiple 
 commands in a batch using `ZEEBE_REDIS_BATCH_SIZE` as maximum thus increasing the throughput. According to the Lettuce documentation batches are recommended to have a size between 50 and 1000.
+
+### Using Redis clusters
+*Since 0.9.10*
+
+When connecting to Redis clusters the underlying Lettuce client must use the `RedisClusterClient` which differs from the standard `RedisClient`.
+In order to activate the cluster client usage of the exporter set `ZEEBE_REDIS_USE_CLUSTER_CLIENT=true` in your environment.
+
+On the connector side it's your own responsibility to create the `RedisClusterClient` and use it:
+
+```
+final RedisClusterClient redisClient = RedisClusterClient.create(...);
+        
+final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClusterClient)
+        .consumerGroup("MyApplication").consumerId("consumer-1")
+        .addIncidentListener(incident -> { ... })
+        .addJobListener(job -> { ... })
+        .build();
+```
+
+**Sharding in Redis clusters**
+
+Till now the connector uses a Multi-key operation to receive events from Redis. 
+Sadly certain Multi-key operations - including the stream commands - are not possible in a cluster. You will
+experience errors saying `CROSSSLOT Keys in request don't hash to the same slot` on the connector side.
+
+The temporary workaround for this error is to wrap the default prefix `zeebe` with `{}` ending up
+in configuring `ZEEBE_REDIS_NAME={zeebe}` for the exporter and setting the prefix `{zeebe}` on the connector side as well. 
+The consequence is that all records then end up in the same shard and can therefore all be retrieved collectively as before by using a Multi-key Operation. Even if this does not necessarily correspond to the purpose of a cluster it would at least enable its usage.
+
+This section will disappear as soon as the connector is optionally available without multi-key operations.
 
 ## Build it from Source
 

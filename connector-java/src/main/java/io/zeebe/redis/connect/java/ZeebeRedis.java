@@ -3,14 +3,17 @@ package io.zeebe.redis.connect.java;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.camunda.zeebe.protocol.record.ValueType;
 import io.lettuce.core.*;
-import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.cluster.RedisClusterClient;
 import io.zeebe.exporter.proto.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.SocketAddress;
 import java.time.Duration;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -21,8 +24,6 @@ public class ZeebeRedis implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(ZeebeRedis.class);
 
   private static final Map <String, Class<? extends com.google.protobuf.Message>> RECORD_MESSAGE_TYPES;
-  private static final int XREAD_BLOCK_MILLISECONDS = 2000;
-  private static final int XREAD_COUNT = 500;
 
   static {
     RECORD_MESSAGE_TYPES = Map.ofEntries(
@@ -49,13 +50,12 @@ public class ZeebeRedis implements AutoCloseable {
     return new AbstractMap.SimpleEntry<>(valueType, messageClass);
   }
 
-  private RedisClient redisClient;
+  private UniversalRedisClient redisClient;
+  private UniversalRedisConnection<String, byte[]> redisConnection;
 
-  private StatefulRedisConnection<String, byte[]> redisConnection;
+  private int xreadBlockMillis;
 
-  private int xreadBlockMillis = XREAD_BLOCK_MILLISECONDS;
-
-  private int xreadCount = XREAD_COUNT;
+  private int xreadCount;
 
   private String consumerGroup;
 
@@ -67,29 +67,29 @@ public class ZeebeRedis implements AutoCloseable {
 
   private final Map<String, List<Consumer<?>>> listeners;
 
-  private boolean deleteMessages = false;
+  private boolean deleteMessages;
 
   private Future<?> future;
   private ExecutorService executorService;
 
-  private boolean reconnectUsesNewConnection = false;
+  private boolean reconnectUsesNewConnection;
   private long reconnectIntervalMillis;
   private Future<?> reconnectFuture;
   private ExecutorService reconnectExecutorService;
   private volatile boolean isClosed = false;
   private volatile boolean forcedClose = false;
 
-  private boolean shouldDestroyConsumerGroupOnClose = false;
+  private boolean shouldDestroyConsumerGroupOnClose;
 
-  private ZeebeRedis(RedisClient redisClient,
-                     StatefulRedisConnection<String, byte[]> redisConnection,
-                     boolean reconnectUsesNewConnection, Duration reconnectInterval,
-                     int xreadBlockMillis, int xreadCount,
-                     String consumerGroup, String consumerId,
-                     String prefix, XReadArgs.StreamOffset<String>[] offsets,
-                     Map<String, List<Consumer<?>>> listeners,
-                     boolean deleteMessages,
-                     boolean shouldDestroyConsumerGroupOnClose) {
+  protected ZeebeRedis(UniversalRedisClient redisClient,
+                       UniversalRedisConnection<String, byte[]> redisConnection,
+                       boolean reconnectUsesNewConnection, Duration reconnectInterval,
+                       int xreadBlockMillis, int xreadCount,
+                       String consumerGroup, String consumerId,
+                       String prefix, XReadArgs.StreamOffset<String>[] offsets,
+                       Map<String, List<Consumer<?>>> listeners,
+                       boolean deleteMessages,
+                       boolean shouldDestroyConsumerGroupOnClose) {
     this.redisClient = redisClient;
     this.redisConnection = redisConnection;
     this.reconnectUsesNewConnection = reconnectUsesNewConnection;
@@ -109,11 +109,15 @@ public class ZeebeRedis implements AutoCloseable {
   }
 
   /** Returns a new builder to read from the Redis Streams. */
-  public static Builder newBuilder(RedisClient redisClient) {
-    return new ZeebeRedis.Builder(redisClient);
+  public static RedisConnectionBuilder newBuilder(RedisClient redisClient) {
+    return new RedisConnectionBuilder(redisClient);
   }
 
-  private void start() {
+  public static RedisConnectionBuilder newBuilder(RedisClusterClient redisClient) {
+    return new RedisConnectionBuilder(redisClient);
+  }
+
+  protected void start() {
     redisConnection.addListener(new RedisConnectionStateAdapter() {
       public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
         LOGGER.info("Redis reconnected.");
@@ -141,9 +145,10 @@ public class ZeebeRedis implements AutoCloseable {
         Thread.sleep(reconnectIntervalMillis);
         redisConnection = redisClient.connect(protobufCodec);
         LOGGER.info("Redis reconnected.");
+        var syncStreamCommands = redisConnection.syncStreamCommands();
         listeners.keySet().stream().forEach(stream -> {
           try {
-            redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from(stream, "0-0"), consumerGroup,
+            syncStreamCommands.xgroupCreate(XReadArgs.StreamOffset.from(stream, "0-0"), consumerGroup,
                     XGroupCreateArgs.Builder.mkstream());
           } catch (RedisBusyException ex) {
             // NOOP: consumer group already exists
@@ -167,11 +172,12 @@ public class ZeebeRedis implements AutoCloseable {
   @Override
   public void close() {
     if (shouldDestroyConsumerGroupOnClose) {
+      var syncStreamCommands = redisConnection.syncStreamCommands();
       Arrays.stream(offsets).forEach(o -> {
         String stream = String.valueOf(o.getName());
         LOGGER.debug("Destroying consumer group {} of stream {}", consumerGroup, stream);
         try {
-          redisConnection.sync().xgroupDestroy(stream, consumerGroup);
+          syncStreamCommands.xgroupDestroy(stream, consumerGroup);
         } catch (Exception ex) {
           LOGGER.error("Error destroying consumer group {} of stream {}", consumerGroup, stream);
         }
@@ -227,16 +233,17 @@ public class ZeebeRedis implements AutoCloseable {
     LOGGER.trace("Consumer[id={}] reads from streams '{}*'", consumerId, prefix);
 
     try {
-      List<StreamMessage<String, byte[]>> messages = redisConnection.sync()
+      List<StreamMessage<String, byte[]>> messages = redisConnection.syncStreamCommands()
               .xreadgroup(io.lettuce.core.Consumer.from(consumerGroup, consumerId),
                       XReadArgs.Builder.block(xreadBlockMillis).count(xreadCount), offsets);
 
+      var asyncStreamCommands = redisConnection.asyncStreamCommands();
       for (StreamMessage<String, byte[]> message : messages) {
         LOGGER.trace("Consumer[id={}] received message {} from {}", consumerId, message.getId(), message.getStream());
         var success = handleRecord(message);
-        redisConnection.async().xack(message.getStream(), consumerGroup, message.getId());
+        asyncStreamCommands.xack(message.getStream(), consumerGroup, message.getId());
         if (deleteMessages && success) {
-          redisConnection.async().xdel(message.getStream(), message.getId());
+          asyncStreamCommands.xdel(message.getStream(), message.getId());
         }
       }
     } catch (IllegalArgumentException ex) {
@@ -270,7 +277,6 @@ public class ZeebeRedis implements AutoCloseable {
       }
     }
   }
-
   private boolean handleRecord(StreamMessage<String, byte[]> message) throws InvalidProtocolBufferException {
     final var messageValue = message.getBody().values().iterator().next();
     final var genericRecord = Schema.Record.parseFrom(messageValue);
@@ -298,220 +304,6 @@ public class ZeebeRedis implements AutoCloseable {
     listeners
       .getOrDefault(stream, List.of())
       .forEach(listener -> ((Consumer<T>) listener).accept(record));
-
   }
 
-  public static class Builder {
-
-    private final RedisClient redisClient;
-
-    private boolean reconnectUsesNewConnection = false;
-    private Duration reconnectInterval = Duration.ofSeconds(1);
-
-    private final Map<String, List<Consumer<?>>> listeners = new HashMap<>();
-
-    private String consumerGroup = UUID.randomUUID().toString();
-
-    private boolean shouldDestroyConsumerGroupOnClose = true;
-
-    private String consumerId = UUID.randomUUID().toString();
-    private String prefix = "zeebe:";
-
-    private String offset = "0-0";
-
-    private int xreadBlockMillis = XREAD_BLOCK_MILLISECONDS;
-
-    private int xreadCount = XREAD_COUNT;
-
-    private boolean deleteMessages = false;
-
-    private Builder(RedisClient redisClient) {
-      this.redisClient = redisClient;
-    }
-
-    public Builder withReconnectUsingNewConnection() {
-      this.reconnectUsesNewConnection = true;
-      return this;
-    }
-
-    public Builder reconnectInterval(Duration duration) {
-      this.reconnectInterval = duration;
-      return this;
-    }
-
-    /** Sets the XREAD [BLOCK milliseconds] parameter. Default is 2000. */
-    public Builder xreadBlockMillis(int xreadBlockMillis) {
-      this.xreadBlockMillis = xreadBlockMillis;
-      return this;
-    }
-
-    /** Sets the XREAD [COUNT count] parameter. Default is 1000. */
-    public Builder xreadCount(int xreadCount) {
-      this.xreadCount = xreadCount;
-      return this;
-    }
-
-    /** Set the consumer group, e.g. the application name. */
-    public Builder consumerGroup(String consumerGroup) {
-      this.consumerGroup = consumerGroup;
-      this.shouldDestroyConsumerGroupOnClose = false;
-      return this;
-    }
-
-    /** Set the unique consumer ID. */
-    public Builder consumerId(String consumerId) {
-      this.consumerId = consumerId;
-      return this;
-    }
-
-    /** Set the prefix for the Streams to read from. */
-    public Builder prefix(String name) {
-      this.prefix = name + ":";
-      return this;
-    }
-
-    /** Start reading from a given offset. */
-    public Builder offset(String offset) {
-      this.offset = offset;
-      return this;
-    }
-
-    public Builder deleteMessagesAfterSuccessfulHandling(boolean deleteMessages) {
-      this.deleteMessages = deleteMessages;
-      return this;
-    }
-
-    private <T extends com.google.protobuf.Message> void addListener(
-        String valueType, Consumer<T> listener) {
-      final var recordListeners = listeners.getOrDefault(valueType, new ArrayList<>());
-      recordListeners.add(listener);
-      listeners.put(prefix + valueType, recordListeners);
-    }
-
-    public Builder addDeploymentListener(Consumer<Schema.DeploymentRecord> listener) {
-      addListener(ValueType.DEPLOYMENT.name(), listener);
-      return this;
-    }
-
-    public Builder addDeploymentDistributionListener(
-        Consumer<Schema.DeploymentDistributionRecord> listener) {
-      addListener(ValueType.DEPLOYMENT_DISTRIBUTION.name(), listener);
-      return this;
-    }
-
-    public Builder addProcessListener(Consumer<Schema.ProcessRecord> listener) {
-      addListener(ValueType.PROCESS.name(), listener);
-      return this;
-    }
-
-    public Builder addProcessInstanceListener(Consumer<Schema.ProcessInstanceRecord> listener) {
-      addListener(ValueType.PROCESS_INSTANCE.name(), listener);
-      return this;
-    }
-
-    public Builder addProcessEventListener(Consumer<Schema.ProcessEventRecord> listener) {
-      addListener(ValueType.PROCESS_EVENT.name(), listener);
-      return this;
-    }
-
-    public Builder addVariableListener(Consumer<Schema.VariableRecord> listener) {
-      addListener(ValueType.VARIABLE.name(), listener);
-      return this;
-    }
-
-    public Builder addVariableDocumentListener(Consumer<Schema.VariableDocumentRecord> listener) {
-      addListener(ValueType.VARIABLE_DOCUMENT.name(), listener);
-      return this;
-    }
-
-    public Builder addJobListener(Consumer<Schema.JobRecord> listener) {
-      addListener(ValueType.JOB.name(), listener);
-      return this;
-    }
-
-    public Builder addJobBatchListener(Consumer<Schema.JobBatchRecord> listener) {
-      addListener(ValueType.JOB_BATCH.name(), listener);
-      return this;
-    }
-
-    public Builder addIncidentListener(Consumer<Schema.IncidentRecord> listener) {
-      addListener(ValueType.INCIDENT.name(), listener);
-      return this;
-    }
-
-    public Builder addTimerListener(Consumer<Schema.TimerRecord> listener) {
-      addListener(ValueType.TIMER.name(), listener);
-      return this;
-    }
-
-    public Builder addMessageListener(Consumer<Schema.MessageRecord> listener) {
-      addListener(ValueType.MESSAGE.name(), listener);
-      return this;
-    }
-
-    public Builder addMessageSubscriptionListener(
-        Consumer<Schema.MessageSubscriptionRecord> listener) {
-      addListener(ValueType.MESSAGE_SUBSCRIPTION.name(), listener);
-      return this;
-    }
-
-    public Builder addMessageStartEventSubscriptionListener(
-        Consumer<Schema.MessageStartEventSubscriptionRecord> listener) {
-      addListener(ValueType.MESSAGE_START_EVENT_SUBSCRIPTION.name(), listener);
-      return this;
-    }
-
-    public Builder addProcessMessageSubscriptionListener(
-        Consumer<Schema.ProcessMessageSubscriptionRecord> listener) {
-      addListener(ValueType.PROCESS_MESSAGE_SUBSCRIPTION.name(), listener);
-      return this;
-    }
-
-    public Builder addProcessInstanceCreationListener(
-        Consumer<Schema.ProcessInstanceCreationRecord> listener) {
-      addListener(ValueType.PROCESS_INSTANCE_CREATION.name(), listener);
-      return this;
-    }
-
-    public Builder addErrorListener(Consumer<Schema.ErrorRecord> listener) {
-      addListener(ValueType.ERROR.name(), listener);
-      return this;
-    }
-
-    /**
-     * Start a background task that reads from Zeebe Streams.
-     * <br>
-     * Call {@link #close()} to stop reading.
-     */
-    public ZeebeRedis build() {
-      if (listeners.size() == 0) {
-        throw new IllegalArgumentException("Must register a least one listener, but none found.");
-      }
-
-
-      final var connection = redisClient.connect(new ProtobufCodec());
-
-      LOGGER.info("Read from Redis streams '{}*' with offset '{}'", prefix, offset);
-
-      // Prepare
-      List<XReadArgs.StreamOffset<String>> offsets = new ArrayList<>();
-      listeners.keySet().stream().forEach(stream -> {
-        offsets.add(XReadArgs.StreamOffset.lastConsumed(stream));
-        try {
-          connection.sync().xgroupCreate(XReadArgs.StreamOffset.from(stream, offset), consumerGroup,
-                  XGroupCreateArgs.Builder.mkstream());
-        } catch (RedisBusyException ex) {
-          // NOOP: consumer group already exists
-        }
-      });
-
-      final var zeebeRedis = new ZeebeRedis(redisClient, connection, reconnectUsesNewConnection, reconnectInterval,
-              xreadBlockMillis, xreadCount, consumerGroup, consumerId, prefix,
-              offsets.toArray(new XReadArgs.StreamOffset[0]), listeners, deleteMessages,
-              shouldDestroyConsumerGroupOnClose);
-      zeebeRedis.start();
-
-      return zeebeRedis;
-    }
-  }
 }

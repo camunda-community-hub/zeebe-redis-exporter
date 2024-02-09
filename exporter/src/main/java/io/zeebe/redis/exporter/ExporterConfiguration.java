@@ -17,6 +17,7 @@ public class ExporterConfiguration {
   private String name = "zeebe";
 
   private String remoteAddress;
+  private boolean useClusterClient = false;
 
   private long cleanupCycleInSeconds = Duration.ofMinutes(1).toSeconds();
 
@@ -83,6 +84,10 @@ public class ExporterConfiguration {
             .map(RedisURI::create);
   }
 
+  public boolean isUseClusterClient() {
+    return getEnv("USE_CLUSTER_CLIENT").map(Boolean::parseBoolean).orElse(useClusterClient);
+  }
+
   private Optional<String> getEnv(String name) {
     return Optional.ofNullable(System.getenv(ENV_PREFIX + name));
   }
@@ -91,6 +96,7 @@ public class ExporterConfiguration {
   public String toString() {
     return "[" +
             "remoteAddress='" + getRemoteAddress() + '\'' +
+            ", useClusterClient='" + isUseClusterClient() + '\'' +
             ", enabledValueTypes='" + getEnabledValueTypes() + '\'' +
             ", enabledRecordTypes='" + getEnabledRecordTypes() + '\'' +
             ", format='" + getFormat() + '\'' +
