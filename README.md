@@ -351,7 +351,7 @@ The temporary workaround for this error is to wrap the default prefix `zeebe` wi
 in configuring `ZEEBE_REDIS_NAME={zeebe}` for the exporter and setting the prefix `{zeebe}` on the connector side as well. 
 The consequence is that all records then end up in the same shard and can therefore all be retrieved collectively as before by using a Multi-key Operation. Even if this does not necessarily correspond to the purpose of a cluster it would at least enable its usage.
 
-This section will disappear as soon as the connector is optionally available without multi-key operations.
+This section will disappear as soon as the connector is optionally available without multi-key operations. The feature is currently under development.
 
 ## Build it from Source
 
