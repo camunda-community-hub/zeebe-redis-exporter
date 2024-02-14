@@ -9,8 +9,8 @@
 
     <Loggers>
         <Logger name="io.zeebe" level="info"/>
-        <Logger name="io.zeebe.broker.exporter" level="trace"/>
-        <Logger name="io.zeebe.redis" level="trace"/>
+        <Logger name="io.zeebe.broker.exporter" level="debug"/>
+        <Logger name="io.zeebe.redis" level="debug"/>
 
         <Root level="info">
             <AppenderRef ref="Console"/>

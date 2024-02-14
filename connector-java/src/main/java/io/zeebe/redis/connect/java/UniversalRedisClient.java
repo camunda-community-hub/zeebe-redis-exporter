@@ -21,4 +21,12 @@ public class UniversalRedisClient {
         return new UniversalRedisConnection<>(redisClusterClient.connect(protobufCodec));
     }
 
+    public boolean isCluster() {
+        return redisClusterClient != null;
+    }
+
+    public RedisClusterClient getRedisClusterClient() {
+        return redisClusterClient;
+    }
+
 }

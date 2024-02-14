@@ -4,6 +4,10 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import io.camunda.zeebe.protocol.record.ValueType;
 import io.lettuce.core.*;
 import io.lettuce.core.cluster.RedisClusterClient;
+import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.support.AsyncConnectionPoolSupport;
+import io.lettuce.core.support.BoundedAsyncPool;
+import io.lettuce.core.support.BoundedPoolConfig;
 import io.zeebe.exporter.proto.Schema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,9 +18,7 @@ import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 public class ZeebeRedis implements AutoCloseable {
@@ -52,6 +54,7 @@ public class ZeebeRedis implements AutoCloseable {
 
   private UniversalRedisClient redisClient;
   private UniversalRedisConnection<String, byte[]> redisConnection;
+  private BoundedAsyncPool<StatefulRedisClusterConnection<String, byte[]>> redisPool;
 
   private int xreadBlockMillis;
 
@@ -118,20 +121,44 @@ public class ZeebeRedis implements AutoCloseable {
   }
 
   protected void start() {
-    redisConnection.addListener(new RedisConnectionStateAdapter() {
-      public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
-        LOGGER.info("Redis reconnected.");
+    if (redisClient.isCluster()) {
+      CompletionStage<BoundedAsyncPool<StatefulRedisClusterConnection<String, byte[]>>> poolFuture =
+              AsyncConnectionPoolSupport.createBoundedObjectPoolAsync(() ->
+                              redisClient.getRedisClusterClient().connectAsync(new ProtobufCodec()),
+                      BoundedPoolConfig.builder().maxTotal(offsets.length).build());
+      try {
+        redisPool = poolFuture.toCompletableFuture().get();
+      } catch (InterruptedException e) {
+        LOGGER.error("Error creating Redis cluster connection pool", e);
+        throw new RuntimeException(e);
+      } catch (ExecutionException e) {
+        LOGGER.error("Error creating Redis cluster connection pool", e);
+        throw new RuntimeException(e);
       }
-      public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
-        if (forcedClose) return;
-        LOGGER.warn("Redis connection lost.");
-        if (reconnectUsesNewConnection) {
-          doClose();
-          reconnectExecutorService = Executors.newSingleThreadExecutor();
-          reconnectFuture = reconnectExecutorService.submit(ZeebeRedis.this::reconnect);
+      // the connection has been used to create consumer groups and can now be closed
+      // because reading from streams is done by the connection pool
+      redisConnection.close();
+      if (reconnectUsesNewConnection) {
+        LOGGER.warn("Parameter 'reconnectUsesNewConnection' has no effect when using RedisClusterClient.");
+      }
+    } else {
+      // if we're not connected to a cluster we eventually handle reconnects ourselves
+      redisConnection.addListener(new RedisConnectionStateAdapter() {
+        public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
+          LOGGER.info("Redis reconnected.");
         }
-      }
-    });
+
+        public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
+          if (forcedClose) return;
+          LOGGER.warn("Redis connection lost.");
+          if (reconnectUsesNewConnection) {
+            doClose();
+            reconnectExecutorService = Executors.newSingleThreadExecutor();
+            reconnectFuture = reconnectExecutorService.submit(ZeebeRedis.this::reconnect);
+          }
+        }
+      });
+    }
     forcedClose = false;
     isClosed = false;
     executorService = Executors.newSingleThreadExecutor();
@@ -196,6 +223,10 @@ public class ZeebeRedis implements AutoCloseable {
 
     isClosed = true;
 
+    if (redisPool != null) {
+      redisPool.closeAsync();
+      redisPool = null;
+    }
     if (future != null) {
       future.cancel(true);
       future = null;
@@ -224,20 +255,36 @@ public class ZeebeRedis implements AutoCloseable {
       reconnectExecutorService.shutdown();
       reconnectExecutorService = null;
     }
-    while (!isClosed) {
-      readNext();
+    if (!redisClient.isCluster()) {
+      while (!isClosed) {
+        readNext(redisConnection, offsets);
+      }
+    } else {
+      for (XReadArgs.StreamOffset offset : offsets) {
+        redisPool.acquire().thenAcceptAsync(connection -> {
+          var universalRedisConnection = new UniversalRedisConnection(connection);
+          while (!isClosed) {
+            readNext(universalRedisConnection, offset);
+          }
+          redisPool.release(connection);
+        });
+      }
     }
   }
 
-  private void readNext() {
-    LOGGER.trace("Consumer[id={}] reads from streams '{}*'", consumerId, prefix);
+  private void readNext(UniversalRedisConnection redisConnection, XReadArgs.StreamOffset... offsets) {
+    if (offsets.length == 1) {
+      LOGGER.trace("Consumer[id={}] reads from stream '{}'", consumerId, offsets[0].getName());
+    } else {
+      LOGGER.trace("Consumer[id={}] reads from streams '{}*'", consumerId, prefix);
+    }
 
     try {
-      List<StreamMessage<String, byte[]>> messages = redisConnection.syncStreamCommands()
-              .xreadgroup(io.lettuce.core.Consumer.from(consumerGroup, consumerId),
-                      XReadArgs.Builder.block(xreadBlockMillis).count(xreadCount), offsets);
-
       var asyncStreamCommands = redisConnection.asyncStreamCommands();
+      List<StreamMessage<String, byte[]>> messages = (List<StreamMessage<String, byte[]>>) asyncStreamCommands
+              .xreadgroup(io.lettuce.core.Consumer.from(consumerGroup, consumerId),
+                      XReadArgs.Builder.block(xreadBlockMillis).count(xreadCount), offsets).get();
+
       for (StreamMessage<String, byte[]> message : messages) {
         LOGGER.trace("Consumer[id={}] received message {} from {}", consumerId, message.getId(), message.getStream());
         var success = handleRecord(message);
@@ -248,6 +295,7 @@ public class ZeebeRedis implements AutoCloseable {
       }
     } catch (IllegalArgumentException ex) {
       // should not happen with a correct configuration
+      redisConnection.releaseFromPool(redisPool);
       LOGGER.error("Illegal arguments for xreadgroup: {}. Closing Redis client.", ex.getMessage());
       try {
         forceClose();
@@ -260,6 +308,7 @@ public class ZeebeRedis implements AutoCloseable {
       }
     } catch (RedisCommandExecutionException e) {
       // should not happen, but we want to recover anyway
+      redisConnection.releaseFromPool(redisPool);
       if (!isClosed) {
         LOGGER.error("Consumer[group={}, id={}] failed to read from streams '{}*': {}. Initiating reconnect.", consumerGroup, consumerId, prefix, e.getMessage());
         try {
@@ -296,9 +345,7 @@ public class ZeebeRedis implements AutoCloseable {
 
   private <T extends com.google.protobuf.Message> void handleRecord(String stream,
       Schema.Record genericRecord, Class<T> t) throws InvalidProtocolBufferException {
-
     final var record = genericRecord.getRecord().unpack(t);
-
     LOGGER.trace("Consumer[id={}] handling record {}", consumerId, record);
 
     listeners

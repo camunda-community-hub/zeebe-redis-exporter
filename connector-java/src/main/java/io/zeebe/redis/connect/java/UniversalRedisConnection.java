@@ -6,6 +6,7 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisStreamAsyncCommands;
 import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.support.BoundedAsyncPool;
 
 public class UniversalRedisConnection<K, V> {
 
@@ -39,5 +40,11 @@ public class UniversalRedisConnection<K, V> {
 
     public void close() {
         theConnection.close();
+    }
+
+    public void releaseFromPool(BoundedAsyncPool<StatefulRedisClusterConnection<K, V>> redisPool) {
+        if (redisPool != null && redisClusterConnection != null) {
+            redisPool.release(redisClusterConnection);
+        }
     }
 }

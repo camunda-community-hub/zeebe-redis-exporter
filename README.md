@@ -343,15 +343,12 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClusterClient)
 
 **Sharding in Redis clusters**
 
-Till now the connector uses a Multi-key operation to receive events from Redis. 
-Sadly certain Multi-key operations - including the stream commands - are not possible in a cluster. You will
+When using the standard `RedisClient` the connector uses a Multi-key operation to receive events from Redis. 
+Some Multi-key operations - including stream commands - are not possible in a cluster. We would
 experience errors saying `CROSSSLOT Keys in request don't hash to the same slot` on the connector side.
 
-The temporary workaround for this error is to wrap the default prefix `zeebe` with `{}` ending up
-in configuring `ZEEBE_REDIS_NAME={zeebe}` for the exporter and setting the prefix `{zeebe}` on the connector side as well. 
-The consequence is that all records then end up in the same shard and can therefore all be retrieved collectively as before by using a Multi-key Operation. Even if this does not necessarily correspond to the purpose of a cluster it would at least enable its usage.
-
-This section will disappear as soon as the connector is optionally available without multi-key operations. The feature is currently under development.
+In the case of Redis clusters each stream (which corresponds to a Zeebe `ValueType`) will end up in its own shard.
+The connector - if initialized correctly with the `RedisClusterClient` - then uses multiple connections to read from each stream individually based on the asynchronous connection pool support of Lettuce.
 
 ## Build it from Source
 
