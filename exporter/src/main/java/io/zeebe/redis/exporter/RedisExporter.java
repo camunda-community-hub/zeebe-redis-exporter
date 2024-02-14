@@ -92,9 +92,10 @@ public class RedisExporter implements Exporter {
     this.controller = controller;
 
     if (config.isUseClusterClient()) {
-        redisClient = new UniversalRedisClient(RedisClusterClient.create(
-                ClientResources.builder().ioThreadPoolSize(config.getIoThreadPoolSize()).build(),
-                config.getRemoteAddress().get()));
+        var clusterClient = RedisClusterClient.create(
+                ClusterClientSettings.createResourcesFromConfig(config), config.getRemoteAddress().get());
+        clusterClient.setOptions(ClusterClientSettings.createStandardOptions());
+        redisClient = new UniversalRedisClient(clusterClient);
     } else {
         redisClient = new UniversalRedisClient(RedisClient.create(
                 ClientResources.builder().ioThreadPoolSize(config.getIoThreadPoolSize()).build(),

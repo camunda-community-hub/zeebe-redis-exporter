@@ -335,11 +335,16 @@ On the connector side it's your own responsibility to create the `RedisClusterCl
 final RedisClusterClient redisClient = RedisClusterClient.create(...);
         
 final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClusterClient)
+        .withStandardClusterOptions()
         .consumerGroup("MyApplication").consumerId("consumer-1")
         .addIncidentListener(incident -> { ... })
         .addJobListener(job -> { ... })
         .build();
 ```
+
+The optional method `withStandardClusterOptions()` activates several cluster topology refresh options
+and filters out failed nodes from the topology. It sets / overrides the cluster client options and 
+might be a good option if you do not have any specific own requirements.
 
 **Sharding in Redis clusters**
 

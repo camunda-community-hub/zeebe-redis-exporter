@@ -72,7 +72,7 @@ public class ZeebeRedis implements AutoCloseable {
 
   private boolean deleteMessages;
 
-  private Future<?> future;
+  private Future<?> readFuture;
   private ExecutorService executorService;
 
   private boolean reconnectUsesNewConnection;
@@ -135,9 +135,11 @@ public class ZeebeRedis implements AutoCloseable {
         LOGGER.error("Error creating Redis cluster connection pool", e);
         throw new RuntimeException(e);
       }
-      // the connection has been used to create consumer groups and can now be closed
-      // because reading from streams is done by the connection pool
-      redisConnection.close();
+      if (!shouldDestroyConsumerGroupOnClose) {
+        // the connection has been used to create consumer groups and can now be closed
+        // because reading from streams is done by the connection pool.
+        redisConnection.close();
+      }
       if (reconnectUsesNewConnection) {
         LOGGER.warn("Parameter 'reconnectUsesNewConnection' has no effect when using RedisClusterClient.");
       }
@@ -162,7 +164,7 @@ public class ZeebeRedis implements AutoCloseable {
     forcedClose = false;
     isClosed = false;
     executorService = Executors.newSingleThreadExecutor();
-    future = executorService.submit(this::readFromStream);
+    readFuture = executorService.submit(this::readFromStream);
   }
 
   public void reconnect() {
@@ -195,14 +197,15 @@ public class ZeebeRedis implements AutoCloseable {
     return isClosed;
   }
 
-  /** Stop reading from the Redis Strams. */
+  /** Stop reading from the Redis Streams. */
   @Override
   public void close() {
+    isClosed = true;
     if (shouldDestroyConsumerGroupOnClose) {
       var syncStreamCommands = redisConnection.syncStreamCommands();
       Arrays.stream(offsets).forEach(o -> {
         String stream = String.valueOf(o.getName());
-        LOGGER.debug("Destroying consumer group {} of stream {}", consumerGroup, stream);
+        LOGGER.trace("Destroying consumer group {} of stream {}", consumerGroup, stream);
         try {
           syncStreamCommands.xgroupDestroy(stream, consumerGroup);
         } catch (Exception ex) {
@@ -227,9 +230,9 @@ public class ZeebeRedis implements AutoCloseable {
       redisPool.closeAsync();
       redisPool = null;
     }
-    if (future != null) {
-      future.cancel(true);
-      future = null;
+    if (readFuture != null) {
+      readFuture.cancel(true);
+      readFuture = null;
     }
     if (executorService != null) {
       executorService.shutdown();

@@ -55,6 +55,11 @@ public class RedisConnectionBuilder {
         return this;
     }
 
+    public RedisConnectionBuilder withStandardClusterOptions() {
+        this.redisClient.setStandardClusterOptions();
+        return this;
+    }
+
     public RedisConnectionBuilder reconnectInterval(Duration duration) {
         this.reconnectInterval = duration;
         return this;
