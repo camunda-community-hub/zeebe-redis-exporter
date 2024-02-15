@@ -141,7 +141,9 @@ public class ZeebeRedis implements AutoCloseable {
         redisConnection.close();
       }
       if (reconnectUsesNewConnection) {
+        // take care to not close the whole connection pool in case of failing cluster connections
         LOGGER.warn("Parameter 'reconnectUsesNewConnection' has no effect when using RedisClusterClient.");
+        reconnectUsesNewConnection = false;
       }
     } else {
       // if we're not connected to a cluster we eventually handle reconnects ourselves
