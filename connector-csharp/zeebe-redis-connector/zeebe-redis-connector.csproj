@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Io.Zeebe.Redis.Connect.Csharp</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>0.9.11</Version>
+    <Authors>Gunnar.vonderBeck</Authors>
+    <Company>Accso GmbH</Company>
+    <Description>Zeebe Redis Connector</Description>
+    <Copyright>Copyright © Accso GmbH 2024</Copyright>
+    <PackageProjectUrl>https://github.com/camunda-community-hub/zeebe-redis-exporter</PackageProjectUrl>
+    <PackageTags>Camunda Zeebe Redis</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Protobuf Include="protobuf\schema.proto" GrpcServices="Client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.25.3" />
+    <PackageReference Include="Google.Protobuf.Tools" Version="3.25.3" />
+    <PackageReference Include="Grpc.Tools" Version="2.62.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="StackExchange.Redis" Version="2.7.23" />
+  </ItemGroup>
+
+</Project>

@@ -34,4 +34,6 @@ packages/
 *.userprefs
 obj/
 .vs/
+
+# dedicated classes
 /connector-java/src/test/java/io/zeebe/redis/ExporterMassDataTest.java
