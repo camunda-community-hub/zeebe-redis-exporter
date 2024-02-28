@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -46,6 +47,17 @@ namespace Io.Zeebe.Redis.Connect.Csharp.Hosting
             return services;
         }
 
+        public static IServiceCollection AddZeebeRedis(this IServiceCollection services)
+        {
+            services
+                .AddHostedService<ZeebeRedisHostedService>()
+                .AddSingleton<ZeebeRedis>()
+                .AddOptions<ZeebeRedisOptions>()
+                .Configure((options) => {})
+                .Validate(ValidateZeebeRedisOptions);
+
+            return services;
+        }
 
         private static bool ValidateZeebeRedisOptions(ZeebeRedisOptions options)
         {
