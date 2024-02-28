@@ -5,7 +5,7 @@ This library enables the retrieval of Zeebe events with C#. It is based on [Stac
 and requires the configuration of the Zeebe Exporter as described in the main project.
 
 Current limitations:
-* Uses a Multi-key operation to receive events from Redis and thus does not yet work with Redis Clusters.
+* The connector uses a Multi-key operation to receive events from Redis and thus does not yet work with Redis Clusters.
 * StackExchange.Redis does not yet support blocking operations - hence this library is forced to use polling.
 * It is - not yet - possible to configure a stream prefix other than the default. For now this is hardwired to `zeebe:`.
 
@@ -19,7 +19,7 @@ The Zeebe Redis Connector extension is available via nuget (https://www.nuget.or
 
 ## Bootstrap
 
-The library provides an extension for hosted services `IServiceCollection.AddZeebeRedis(...)`
+The library provides an extension `IServiceCollection.AddZeebeRedis(...)` for hosted services
 in order to bootstrap the connector. It requires `ZeebeRedisOptions`.
 
 You can either wire your options manually
