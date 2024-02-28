@@ -1,16 +1,17 @@
 ﻿using Io.Zeebe.Exporter.Proto;
 using System;
 
-namespace zeebe_redis_connector.consumer
+namespace Io.Zeebe.Redis.Connect.Csharp.Consumer
 {
     public class TimerRecordConsumer : IRecordConsumer
     {
-        public static String STREAM = "zeebe:TIMER";
+        public static string STREAM = "zeebe:TIMER";
 
         private readonly Action<TimerRecord> _consumer;
 
-        public TimerRecordConsumer(Action<TimerRecord> action) {
-            this._consumer = action;
+        public TimerRecordConsumer(Action<TimerRecord> action)
+        {
+            _consumer = action;
         }
 
         public void Consume(Record record)

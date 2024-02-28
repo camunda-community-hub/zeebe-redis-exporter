@@ -1,16 +1,17 @@
 ﻿using Io.Zeebe.Exporter.Proto;
 using System;
 
-namespace zeebe_redis_connector.consumer
+namespace Io.Zeebe.Redis.Connect.Csharp.Consumer
 {
     public class ProcessRecordConsumer : IRecordConsumer
     {
-        public static String STREAM = "zeebe:PROCESS";
+        public static string STREAM = "zeebe:PROCESS";
 
         private readonly Action<ProcessRecord> _consumer;
 
-        public ProcessRecordConsumer(Action<ProcessRecord> action) {
-            this._consumer = action;
+        public ProcessRecordConsumer(Action<ProcessRecord> action)
+        {
+            _consumer = action;
         }
 
         public void Consume(Record record)

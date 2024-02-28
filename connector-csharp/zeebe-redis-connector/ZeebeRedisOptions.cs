@@ -14,12 +14,14 @@ namespace Io.Zeebe.Redis.Connect.Csharp
         private string _redisConfigString = "localhost";
         public virtual string RedisConfigString
         {
+#pragma warning disable CS8603 // Possible null reference return.
             get { return GetEnvironmentVariable("REDIS_CONFIG_STRING", _redisConfigString); }
+#pragma warning restore CS8603 // Possible null reference return.
             set { _redisConfigString = value; }
         }
 
-        private string _redisConsumerGroup = Guid.NewGuid().ToString();
-        public virtual string RedisConsumerGroup
+        private string? _redisConsumerGroup = null;
+        public virtual string? RedisConsumerGroup
         {
             get { return GetEnvironmentVariable("REDIS_CONSUMER_GROUP", _redisConsumerGroup); }
             set { _redisConsumerGroup = value; }
@@ -39,7 +41,7 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             return true;
         }
 
-        public static string GetEnvironmentVariable(string name, string defaultValue)
+        public static string? GetEnvironmentVariable(string name, string? defaultValue)
             => Environment.GetEnvironmentVariable(name) is string v && v.Length > 0 ? v : defaultValue;
 
         public static int GetEnvironmentVariable(string name, int defaultValue)

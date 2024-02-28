@@ -1,4 +1,5 @@
 ﻿using Io.Zeebe.Exporter.Proto;
+using Io.Zeebe.Redis.Connect.Csharp.Consumer;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using StackExchange.Redis;
@@ -7,8 +8,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using zeebe_redis_connector;
-using zeebe_redis_connector.consumer;
 
 namespace Io.Zeebe.Redis.Connect.Csharp
 {
@@ -17,7 +16,7 @@ namespace Io.Zeebe.Redis.Connect.Csharp
         private readonly ILogger? _logger;
         private CancellationTokenSource? _cancellationTokenSource = null;
         private readonly ConnectionMultiplexer _redisConnection;
-        private readonly String _consumerGroup;
+        private readonly string _consumerGroup;
         private readonly bool _deleteConsumerGroupOnDispose = false;
         private readonly IDatabase _database;
         private readonly List<StreamPosition> _streamPositions = new List<StreamPosition>();
@@ -31,7 +30,7 @@ namespace Io.Zeebe.Redis.Connect.Csharp
         // Constructors
         //---------------------------------------------------------------------
 
-        public ZeebeRedis(ConnectionMultiplexer redisConnection, String? consumerGroup = null, ILoggerFactory? loggerFactory = null, int pollIntervalMillis = 500, bool closeRedisConnectionOnDispose = false)
+        public ZeebeRedis(ConnectionMultiplexer redisConnection, string? consumerGroup = null, ILoggerFactory? loggerFactory = null, int pollIntervalMillis = 500, bool closeRedisConnectionOnDispose = false)
         {
             _redisConnection = redisConnection ?? throw new ArgumentNullException(nameof(redisConnection));
             _consumerGroup = consumerGroup ?? Guid.NewGuid().ToString();
@@ -247,8 +246,10 @@ namespace Io.Zeebe.Redis.Connect.Csharp
                                 id = entry.Id;
                                 var record = Record.Parser.ParseFrom(entry.Values.First().Value);
 
+#pragma warning disable CS8600, CS8602
                                 _consumer.TryGetValue(result.Key, out IRecordConsumer consumer);
                                 consumer.Consume(record);
+#pragma warning restore CS8600, CS8602
                                 if (!string.IsNullOrEmpty(id))
                                 {
                                     _database.StreamAcknowledge(result.Key, _consumerGroup, id);

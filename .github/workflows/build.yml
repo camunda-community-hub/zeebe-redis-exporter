@@ -7,6 +7,7 @@ on:
 
 jobs:
   build:
+    name: Build Java
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,3 +27,22 @@ jobs:
 
       - name: Run Maven
         run: mvn -B clean verify com.mycila:license-maven-plugin:check
+  build-net:
+    name: Build .NET
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Pull Zeebe
+      run: docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:latest
+    - name: Pull Redis
+      run: docker pull redis:7-alpine
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup
+      uses: actions/setup-dotnet@v4.0.0
+      with:
+        dotnet-version: 8.x
+    - name: Build
+      run: dotnet build --configuration Release
+    - name: Test
+      run: dotnet test --configuration Release --no-build    

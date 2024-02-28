@@ -1,16 +1,17 @@
 ﻿using Io.Zeebe.Exporter.Proto;
 using System;
 
-namespace zeebe_redis_connector.consumer
+namespace Io.Zeebe.Redis.Connect.Csharp.Consumer
 {
     public class JobBatchRecordConsumer : IRecordConsumer
     {
-        public static String STREAM = "zeebe:JOB_BATCH";
+        public static string STREAM = "zeebe:JOB_BATCH";
 
         private readonly Action<JobBatchRecord> _consumer;
 
-        public JobBatchRecordConsumer(Action<JobBatchRecord> action) {
-            this._consumer = action;
+        public JobBatchRecordConsumer(Action<JobBatchRecord> action)
+        {
+            _consumer = action;
         }
 
         public void Consume(Record record)

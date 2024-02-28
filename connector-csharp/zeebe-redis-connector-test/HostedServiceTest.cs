@@ -12,8 +12,8 @@ using Microsoft.Extensions.Hosting;
 using Io.Zeebe.Exporter.Proto;
 using Microsoft.Extensions.DependencyInjection;
 using Io.Zeebe.Redis.Connect.Csharp;
-using NLog.Extensions.Hosting;
 using Io.Zeebe.Redis.Connect.Csharp.Hosting;
+using NLog.Extensions.Hosting;
 
 using static PleaseWait.Dsl;
 using static PleaseWait.TimeUnit;

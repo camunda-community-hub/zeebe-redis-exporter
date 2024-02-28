@@ -1,16 +1,17 @@
 ﻿using Io.Zeebe.Exporter.Proto;
 using System;
 
-namespace zeebe_redis_connector.consumer
+namespace Io.Zeebe.Redis.Connect.Csharp.Consumer
 {
     public class ErrorRecordConsumer : IRecordConsumer
     {
-        public static String STREAM = "zeebe:ERROR";
+        public static string STREAM = "zeebe:ERROR";
 
         private readonly Action<ErrorRecord> _consumer;
 
-        public ErrorRecordConsumer(Action<ErrorRecord> action) {
-            this._consumer = action;
+        public ErrorRecordConsumer(Action<ErrorRecord> action)
+        {
+            _consumer = action;
         }
 
         public void Consume(Record record)

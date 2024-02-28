@@ -1,6 +1,6 @@
 ﻿using Io.Zeebe.Exporter.Proto;
 
-namespace zeebe_redis_connector.consumer
+namespace Io.Zeebe.Redis.Connect.Csharp.Consumer
 {
     public interface IRecordConsumer
     {

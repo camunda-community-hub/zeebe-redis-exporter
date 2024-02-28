@@ -1,16 +1,17 @@
 ﻿using Io.Zeebe.Exporter.Proto;
 using System;
 
-namespace zeebe_redis_connector.consumer
+namespace Io.Zeebe.Redis.Connect.Csharp.Consumer
 {
     public class MessageSubscriptionRecordConsumer : IRecordConsumer
     {
-        public static String STREAM = "zeebe:MESSAGE_SUBSCRIPTION";
+        public static string STREAM = "zeebe:MESSAGE_SUBSCRIPTION";
 
         private readonly Action<MessageSubscriptionRecord> _consumer;
 
-        public MessageSubscriptionRecordConsumer(Action<MessageSubscriptionRecord> action) {
-            this._consumer = action;
+        public MessageSubscriptionRecordConsumer(Action<MessageSubscriptionRecord> action)
+        {
+            _consumer = action;
         }
 
         public void Consume(Record record)

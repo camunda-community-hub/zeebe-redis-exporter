@@ -11,6 +11,7 @@ on:
       - 'main'
     paths-ignore:
       - 'README.md'
+      - 'connector-csharp/**'
   release:
     types: [published]
 jobs:

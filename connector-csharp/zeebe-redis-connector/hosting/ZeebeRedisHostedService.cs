@@ -1,5 +1,4 @@
-﻿using Io.Zeebe.Redis.Connect.Csharp;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -20,17 +19,17 @@ namespace Io.Zeebe.Redis.Connect.Csharp.Hosting
 
         private Task? _executeTask;
 
-        public ZeebeRedisHostedService(ZeebeRedis zeebeRedis, ILoggerFactory loggerFactory) 
+        public ZeebeRedisHostedService(ZeebeRedis zeebeRedis, ILoggerFactory loggerFactory)
         {
-            this._logger = loggerFactory?.CreateLogger<ZeebeRedisHostedService>() ?? throw new ArgumentNullException(nameof(loggerFactory));
-            this._zeebeRedis = zeebeRedis ?? throw new ArgumentNullException(nameof(zeebeRedis));
+            _logger = loggerFactory?.CreateLogger<ZeebeRedisHostedService>() ?? throw new ArgumentNullException(nameof(loggerFactory));
+            _zeebeRedis = zeebeRedis ?? throw new ArgumentNullException(nameof(zeebeRedis));
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            this.cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            _executeTask = _zeebeRedis.StartConsumeEvents(this.cancellationTokenSource);
+            _executeTask = _zeebeRedis.StartConsumeEvents(cancellationTokenSource);
             // If the task is completed then return it, this will bubble cancellation and failure to the caller
             if (_executeTask.IsCompleted)
             {

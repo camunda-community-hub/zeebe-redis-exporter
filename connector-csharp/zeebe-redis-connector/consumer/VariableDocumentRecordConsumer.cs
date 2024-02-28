@@ -1,16 +1,17 @@
 ﻿using Io.Zeebe.Exporter.Proto;
 using System;
 
-namespace zeebe_redis_connector.consumer
+namespace Io.Zeebe.Redis.Connect.Csharp.Consumer
 {
     public class VariableDocumentRecordConsumer : IRecordConsumer
     {
-        public static String STREAM = "zeebe:VARIABLE_DOCUMENT";
+        public static string STREAM = "zeebe:VARIABLE_DOCUMENT";
 
         private readonly Action<VariableDocumentRecord> _consumer;
 
-        public VariableDocumentRecordConsumer(Action<VariableDocumentRecord> action) {
-            this._consumer = action;
+        public VariableDocumentRecordConsumer(Action<VariableDocumentRecord> action)
+        {
+            _consumer = action;
         }
 
         public void Consume(Record record)
