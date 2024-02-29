@@ -2,7 +2,7 @@ C# Zeebe Redis Connector
 ========================
 
 This library enables the retrieval of Zeebe events with C#. It is based on [StackExchange.Redis](https://www.nuget.org/packages/StackExchange.Redis/) 
-and requires the configuration of the Zeebe Exporter as described in the main project.
+and requires the configuration of the Zeebe Exporter as described in the main project on Camunda Community Hub ([camunda-community-hub/zeebe-redis-exporter](https://github.com/camunda-community-hub/zeebe-redis-exporter)).
 
 Current limitations:
 * The connector uses a Multi-key operation to receive events from Redis and thus does not yet work with Redis Clusters.
@@ -11,6 +11,7 @@ Current limitations:
 
 # Requirements
 
+* [Zeebe 8.x release](https://github.com/zeebe-io/zeebe/releases/) with [Redis Exporter](https://github.com/camunda-community-hub/zeebe-redis-exporter)
 * [.NET 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 
 # Usage

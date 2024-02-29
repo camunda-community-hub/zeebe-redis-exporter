@@ -1,0 +1,39 @@
+name: Deploy C# Connector
+on:
+  release:
+    types: [published]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Pull Zeebe
+      run: docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:latest
+    - name: Pull Redis
+      run: docker pull redis:7-alpine
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Setup
+      uses: actions/setup-dotnet@v4.0.0
+      with:
+        dotnet-version: 8.x
+    - name: Verify commit exists in origin/main
+      run: |
+        git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*
+        git branch --remote --contains | grep origin/main
+    - name: Set VERSION variable from tag
+      run: echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_ENV
+    - name: Build
+      run: dotnet build --configuration Release /p:Version=${VERSION}
+      working-directory: connector-csharp
+    - name: Test
+      run: dotnet test --configuration Release /p:Version=${VERSION} --no-build
+      working-directory: connector-csharp
+    - name: Pack
+      run: dotnet pack --configuration Release /p:Version=${VERSION} --no-build --output .
+      working-directory: connector-csharp
+    - name: Nuget Push nuget.org
+      run: dotnet nuget push "zeebe-redis-connector.${VERSION}.nupkg" -k ${NUGET_TOKEN} -s https://api.nuget.org/v3/index.json
+      working-directory: connector-csharp
+      env:
+        NUGET_TOKEN: ${{ secrets.NUGET_TOKEN }}

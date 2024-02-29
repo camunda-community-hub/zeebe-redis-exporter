@@ -12,7 +12,15 @@
     <Copyright>Copyright © Accso GmbH 2024</Copyright>
     <PackageProjectUrl>https://github.com/camunda-community-hub/zeebe-redis-exporter</PackageProjectUrl>
     <PackageTags>Camunda Zeebe Redis</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
   <ItemGroup>
     <Protobuf Include="protobuf\schema.proto" GrpcServices="Client" />
