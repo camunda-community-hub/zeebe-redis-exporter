@@ -125,6 +125,10 @@ var redisClient = RedisClient.create(
         redisAddress);
 ```
 
+### .NET Application
+
+See [connector-csharp/README.md](https://github.com/camunda-community-hub/zeebe-redis-exporter/blob/main/connector-csharp/README.md)
+
 ## Install
 
 ### Docker
