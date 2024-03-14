@@ -63,7 +63,8 @@ Lastly, it is also possible to use environment variables:
 ```
 ConfigureServices((hostContext, services) => {
     services.AddZeebeRedis()
-    .AddSingleton<ZeebeRedisListener>();
+    .AddSingleton<ZeebeRedisListener>()
+    .AddHostedService(p => p.GetRequiredService<ZeebeRedisListener>());
 })
 ```
 
