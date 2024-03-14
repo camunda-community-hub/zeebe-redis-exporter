@@ -31,7 +31,8 @@ ConfigureServices((hostContext, services) => {
         options.RedisConsumerGroup = "my-consumer-group";
         options.RedisPollIntervallMillis = 500;
     })
-    .AddSingleton<ZeebeRedisListener>();
+    .AddSingleton<ZeebeRedisListener>()
+    .AddHostedService(p => p.GetRequiredService<ZeebeRedisListener>());
 })
 ```
 or use a corresponding configuration section
@@ -41,7 +42,8 @@ ConfigureServices((hostContext, services) => {
     services.AddZeebeRedis(
         hostContext.Configuration.GetSection("ZeebeRedisConfiguration")
     })
-    .AddSingleton<ZeebeRedisListener>();
+    .AddSingleton<ZeebeRedisListener>()
+    .AddHostedService(p => p.GetRequiredService<ZeebeRedisListener>());
 })
 ```
 with
@@ -78,10 +80,10 @@ Environment variables always have precedence over other ways of configuration.
 ## Registering Zeebe Event Listeners
 
 By injecting `ZeebeRedis` in one of your services you're able to register listeners for specific events.
-Registering listeners should happen before the startup of your application e.g. in the constructor.
+Registering listeners should happen before the startup of your application - e.g. in the constructor of an `IHostedService`.
 
 ```
-public class ZeebeRedisListener
+public class ZeebeRedisListener : IHostedService
 {
     public ZeebeRedisListener(ZeebeRedis zeebeRedis) {
         zeebeRedis
@@ -91,6 +93,9 @@ public class ZeebeRedisListener
             ...
             ;
     }
+
+    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
     private void ReceiveDeploymentRecord(DeploymentRecord deploymentRecord)
     {
