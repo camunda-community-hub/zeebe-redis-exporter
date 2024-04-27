@@ -16,7 +16,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-    <PackageReference Include="NLog.Extensions.Hosting" Version="5.3.8" />
+    <PackageReference Include="NLog.Extensions.Hosting" Version="5.3.9" />
     <PackageReference Include="PleaseWait" Version="2.6.0" />
     <PackageReference Include="StackExchange.Redis" Version="2.7.33" />
     <PackageReference Include="Testcontainers" Version="3.8.0" />
