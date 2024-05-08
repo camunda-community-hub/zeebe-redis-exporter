@@ -35,6 +35,7 @@ namespace zeeb_redis_connector_test
         private readonly List<ProcessInstanceCreationRecord> processInstanceCreationRecords = new();
         private readonly List<ProcessMessageSubscriptionRecord> processMessageSubscriptionRecords = new();
         private readonly List<TimerRecord> timerRecords = new();
+        private readonly List<UserTaskRecord> userTaskRecords = new();
         private readonly List<VariableRecord> variableRecords = new();
         private readonly List<VariableDocumentRecord> variableDocumentRecords = new();
 
@@ -58,7 +59,8 @@ namespace zeeb_redis_connector_test
 
             // prepare Redis Listener
             // connection config see https://stackexchange.github.io/StackExchange.Redis/Configuration.html
-            ZeebeRedisOptions options = new() { 
+            ZeebeRedisOptions options = new()
+            {
                 RedisConfigString = "localhost",
                 RedisConsumerGroup = "csharp-consumer"
             };
@@ -78,6 +80,7 @@ namespace zeeb_redis_connector_test
                 .AddProcessInstanceCreationListener(record => processInstanceCreationRecords.Add(record))
                 .AddProcessMessageSubscriptionListener(record => processMessageSubscriptionRecords.Add(record))
                 .AddTimerListener(record => timerRecords.Add(record))
+                .AddUserTaskListener(record => userTaskRecords.Add(record))
                 .AddVariableListener(record => variableRecords.Add(record))
                 .AddVariableDocumentListener(record => variableDocumentRecords.Add(record));
 
@@ -127,26 +130,30 @@ namespace zeeb_redis_connector_test
                 .Retries(0).ErrorMessage("Error").Send());
 
             // then check consumed messages
-            Wait().AtMost(10, SECONDS).PollInterval(2, SECONDS).Until(() => { 
+            Wait().AtMost(10, SECONDS).PollInterval(2, SECONDS).Until(() =>
+            {
                 // deployment
                 Assert.True(deploymentRecords.Count >= 2);
-                Assert.All(deploymentRecords, r => {
+                Assert.All(deploymentRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.Deployment, r.Metadata.ValueType);
-                 });
+                });
                 var deploymentIntent = deploymentRecords.Select(r => r.Metadata.Intent);
                 Assert.Contains("CREATE", deploymentIntent);
                 Assert.Contains("CREATED", deploymentIntent);
 
                 // incident
                 Assert.True(incidentRecords.Count >= 1);
-                Assert.All(incidentRecords, r => {
+                Assert.All(incidentRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.Incident, r.Metadata.ValueType);
                 });
                 Assert.Contains("CREATED", incidentRecords.Select(r => r.Metadata.Intent));
 
                 // job batch
                 Assert.True(jobBatchRecords.Count >= 2);
-                Assert.All(jobBatchRecords, r => {
+                Assert.All(jobBatchRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.JobBatch, r.Metadata.ValueType);
                 });
                 var jobBatchIntent = jobBatchRecords.Select(r => r.Metadata.Intent);
@@ -155,7 +162,8 @@ namespace zeeb_redis_connector_test
 
                 // job
                 Assert.True(jobRecords.Count >= 2);
-                Assert.All(jobRecords, r => {
+                Assert.All(jobRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.Job, r.Metadata.ValueType);
                 });
                 var jobIntent = jobRecords.Select(r => r.Metadata.Intent);
@@ -164,7 +172,8 @@ namespace zeeb_redis_connector_test
 
                 // message
                 Assert.True(messageRecords.Count >= 2);
-                Assert.All(messageRecords, r => {
+                Assert.All(messageRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.Message, r.Metadata.ValueType);
                 });
                 var messageIntent = messageRecords.Select(r => r.Metadata.Intent);
@@ -173,14 +182,16 @@ namespace zeeb_redis_connector_test
 
                 // message start event subscription
                 Assert.True(messageStartEventSubscriptionRecords.Count >= 1);
-                Assert.All(messageStartEventSubscriptionRecords, r => {
+                Assert.All(messageStartEventSubscriptionRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.MessageStartEventSubscription, r.Metadata.ValueType);
                 });
                 Assert.Contains("CREATED", messageStartEventSubscriptionRecords.Select(r => r.Metadata.Intent));
 
                 // message subscription
                 Assert.True(messageSubscriptionRecords.Count >= 3);
-                Assert.All(messageSubscriptionRecords, r => {
+                Assert.All(messageSubscriptionRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.MessageSubscription, r.Metadata.ValueType);
                 });
                 var messageSubscriptionIntent = messageSubscriptionRecords.Select(r => r.Metadata.Intent);
@@ -190,7 +201,8 @@ namespace zeeb_redis_connector_test
 
                 // process event
                 Assert.True(processEventRecords.Count >= 2);
-                Assert.All(processEventRecords, r => {
+                Assert.All(processEventRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.ProcessEvent, r.Metadata.ValueType);
                 });
                 var processEventIntent = processEventRecords.Select(r => r.Metadata.Intent);
@@ -199,7 +211,8 @@ namespace zeeb_redis_connector_test
 
                 // process instance creation
                 Assert.True(processInstanceCreationRecords.Count >= 2);
-                Assert.All(processInstanceCreationRecords, r => {
+                Assert.All(processInstanceCreationRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.ProcessInstanceCreation, r.Metadata.ValueType);
                 });
                 var processInstanceCreationIntent = processInstanceCreationRecords.Select(r => r.Metadata.Intent);
@@ -208,7 +221,8 @@ namespace zeeb_redis_connector_test
 
                 // process instance
                 Assert.True(processInstanceRecords.Count >= 3);
-                Assert.All(processInstanceRecords, r => {
+                Assert.All(processInstanceRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.ProcessInstance, r.Metadata.ValueType);
                 });
                 var processInstanceIntent = processInstanceRecords.Select(r => r.Metadata.Intent);
@@ -218,7 +232,8 @@ namespace zeeb_redis_connector_test
 
                 // process message subrcription
                 Assert.True(processMessageSubscriptionRecords.Count >= 2);
-                Assert.All(processMessageSubscriptionRecords, r => {
+                Assert.All(processMessageSubscriptionRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.ProcessMessageSubscription, r.Metadata.ValueType);
                 });
                 var processMessageSubscriptionIntent = processMessageSubscriptionRecords.Select(r => r.Metadata.Intent);
@@ -227,21 +242,24 @@ namespace zeeb_redis_connector_test
 
                 // process
                 Assert.True(processRecords.Count >= 2);
-                Assert.All(processRecords, r => {
+                Assert.All(processRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.Process, r.Metadata.ValueType);
                 });
                 Assert.Contains("CREATED", processRecords.Select(r => r.Metadata.Intent));
 
                 // timer
                 Assert.True(timerRecords.Count >= 2);
-                Assert.All(timerRecords, r => {
+                Assert.All(timerRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.Timer, r.Metadata.ValueType);
                 });
                 Assert.Contains("CREATED", timerRecords.Select(r => r.Metadata.Intent));
 
                 // variabe document
                 Assert.True(variableDocumentRecords.Count >= 2);
-                Assert.All(variableDocumentRecords, r => {
+                Assert.All(variableDocumentRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.VariableDocument, r.Metadata.ValueType);
                 });
                 var variableDocumentIntent = variableDocumentRecords.Select(r => r.Metadata.Intent);
@@ -250,7 +268,8 @@ namespace zeeb_redis_connector_test
 
                 // variable
                 Assert.True(variableRecords.Count >= 2);
-                Assert.All(variableRecords, r => {
+                Assert.All(variableRecords, r =>
+                {
                     Assert.Equal(RecordMetadata.Types.ValueType.Variable, r.Metadata.ValueType);
                 });
                 Assert.Contains("CREATED", variableRecords.Select(r => r.Metadata.Intent));
@@ -258,6 +277,39 @@ namespace zeeb_redis_connector_test
                 return true;
             });
 
+        }
+
+        [Fact]
+        public async void TestReceiveUserTaskRecords()
+        {
+            // given
+            await _zeebeClient.NewDeployCommand()
+                .AddResourceFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "resources", "usertask-process.bpmn"))
+                .Send();
+
+            // when
+            var processInstance = await _zeebeClient.NewCreateProcessInstanceCommand()
+                .BpmnProcessId("user_task_process")
+                .LatestVersion()
+                .Send();
+
+            // then check consumed messages
+            Wait().AtMost(10, SECONDS).PollInterval(2, SECONDS).Until(() =>
+            {
+                Assert.True(userTaskRecords.Count >= 1);
+                Assert.All(userTaskRecords, r =>
+                {
+                    Assert.Equal(RecordMetadata.Types.ValueType.UserTask, r.Metadata.ValueType);
+                });
+                var userTaskIntent = userTaskRecords.Select(r => r.Metadata.Intent);
+                Assert.Contains("CREATING", userTaskIntent); 
+                Assert.Contains("CREATED", userTaskIntent);
+
+                var candidateGroup = userTaskRecords.Select(r => r.CandidateGroup.Single());
+                Assert.Contains("testGroup", candidateGroup);
+
+                return true;
+            });
         }
 
     }
