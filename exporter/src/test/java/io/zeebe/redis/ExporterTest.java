@@ -30,6 +30,15 @@ public class ExporterTest {
           .endEvent("end")
           .done();
 
+  private static final BpmnModelInstance USER_TASK_WORKFLOW =
+          Bpmn.createExecutableProcess("user_task_process")
+                  .startEvent("start")
+                  .sequenceFlowId("to-task")
+                  .userTask("userTask", u -> u.zeebeUserTask().zeebeCandidateGroups("testGroup"))
+                  .sequenceFlowId("to-end")
+                  .endEvent("end")
+                  .done();
+
   @Container
   public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withDefaultConfig();
 
@@ -101,5 +110,29 @@ public class ExporterTest {
             .xreadgroup(Consumer.from("application_1", "consumer_1"),
                     XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
     assertThat(messages.size()).isEqualTo(0);
+  }
+
+  @Test
+  public void shouldExportUserTaskEvents() throws Exception {
+    // given
+    zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(USER_TASK_WORKFLOW, "user-task.bpmn").send().join();
+    zeebeContainer.getClient().newCreateInstanceCommand().bpmnProcessId("user_task_process").latestVersion().send().join();
+    Thread.sleep(1000);
+
+    // when
+    final var message = redisConnection.sync()
+            .xrange("zeebe:USER_TASK", Range.create("-", "+")).get(0);
+
+    // then
+    assertThat(message).isNotNull();
+    final var messageValue = message.getBody().values().iterator().next();
+
+    final var record = Schema.Record.parseFrom(messageValue);
+    assertThat(record.getRecord().is(Schema.UserTaskRecord.class)).isTrue();
+
+    final var userTaskRecord = record.getRecord().unpack(Schema.UserTaskRecord.class);
+    assertThat(userTaskRecord.getElementId()).isEqualTo("userTask");
+    assertThat(userTaskRecord.getCandidateGroupCount()).isEqualTo(1);
+    assertThat(userTaskRecord.getCandidateGroup(0)).isEqualTo("testGroup");
   }
 }

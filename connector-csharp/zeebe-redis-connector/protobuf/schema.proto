@@ -1,4 +1,4 @@
-// Definition has been taken from 
+// Definition has been taken from
 // https://github.com/camunda-community-hub/zeebe-exporter-protobuf/blob/main/src/main/proto/schema.proto
 // ------------------------------------------------------------------------------------------------------
 syntax = 'proto3';
@@ -59,6 +59,13 @@ message RecordMetadata {
     SIGNAL = 25;
     RESOURCE_DELETION = 26;
     COMMAND_DISTRIBUTION = 27;
+    USER_TASK = 28;
+    PROCESS_INSTANCE_MIGRATION = 29;
+    COMPENSATION_SUBSCRIPTION = 30;
+    PROCESS_INSTANCE_RESULT = 31;
+    PROCESS_INSTANCE_BATCH = 32;
+    MESSAGE_BATCH = 33;
+    FORM = 34;
   }
 
   enum RecordType {
@@ -109,12 +116,23 @@ message DeploymentRecord {
     string tenantId = 8;
   }
 
+  message FormMetadata {
+    string formId = 1;
+    int32 version = 2;
+    int64 formKey = 3;
+    string resourceName = 4;
+    bytes checksum = 5;
+    bool isDuplicate = 6;
+    string tenantId = 7;
+  }
+
   RecordMetadata metadata = 1;
   repeated Resource resources = 2;
   repeated ProcessMetadata processMetadata = 3;
   repeated DecisionRequirementsMetadata decisionRequirementsMetadata = 4;
   repeated DecisionMetadata decisionMetadata = 5;
   string tenantId = 6;
+  repeated FormMetadata formMetadata = 7;
 }
 
 message DeploymentDistributionRecord {
@@ -457,4 +475,71 @@ message SignalSubscriptionRecord {
   string catchEventId = 5;
   int64 catchEventInstanceKey = 6;
   string tenantId = 7;
+}
+
+message FormRecord {
+  RecordMetadata metadata = 1;
+  string formId = 2;
+  int32 version = 3;
+  int64 formKey = 4;
+  string resourceName = 5;
+  bytes checksum = 6;
+  bytes resource = 7;
+  bool isDuplicate = 8;
+  string tenantId = 9;
+}
+
+message ResourceDeletionRecord {
+  RecordMetadata metadata = 1;
+  int64 resourceKey = 2;
+  string tenantId = 3;
+}
+
+message UserTaskRecord {
+  RecordMetadata metadata = 1;
+  int64 userTaskKey = 2;
+  string assignee = 3;
+  string candidateGroups = 4 [deprecated = true];
+  string candidateUsers = 5 [deprecated = true];
+  string dueDate = 6;
+  string followUpDate = 7;
+  int64 formKey = 8;
+  google.protobuf.Struct variables = 9;
+  string bpmnProcessId = 10;
+  int32 processDefinitionVersion = 11;
+  int64 processDefinitionKey = 12;
+  int64 processInstanceKey = 13;
+  string elementId = 14;
+  int64 elementInstanceKey = 15;
+  string tenantId = 16;
+  repeated string candidateGroup = 17;
+  repeated string candidateUser = 18;
+  string externalFormReference = 19;
+  google.protobuf.Struct customHeaders = 20;
+  repeated string changedAttribute = 21;
+  string action = 22;
+  int64 creationTimestamp = 23;
+}
+
+message CompensationSubscriptionRecord {
+  RecordMetadata metadata = 1;
+  string tenantId = 2;
+  int64 processInstanceKey = 3;
+  int64 processDefinitionKey = 4;
+  string compensableActivityId = 5;
+  string throwEventId = 6;
+  int64 throwEventInstanceKey = 7;
+  string compensationHandlerId = 8;
+  int64 compensationHandlerInstanceKey = 9;
+  int64 compensableActivityScopeKey = 10;
+  int64 compensableActivityInstanceKey = 11;
+  google.protobuf.Struct variables = 12;
+}
+
+message EscalationRecord {
+  RecordMetadata metadata = 1;
+  int64 processInstanceKey = 2;
+  string escalationCode = 3;
+  string throwElementId = 4;
+  string catchElementId = 5;
 }

@@ -29,9 +29,12 @@ public class ZeebeRedis implements AutoCloseable {
 
   static {
     RECORD_MESSAGE_TYPES = Map.ofEntries(
+            typeEntry(ValueType.COMPENSATION_SUBSCRIPTION.name(), Schema.CompensationSubscriptionRecord.class),
             typeEntry(ValueType.DEPLOYMENT.name(), Schema.DeploymentRecord.class),
             typeEntry(ValueType.DEPLOYMENT_DISTRIBUTION.name(), Schema.DeploymentDistributionRecord.class),
             typeEntry(ValueType.ERROR.name(), Schema.ErrorRecord.class),
+            typeEntry(ValueType.ESCALATION.name(), Schema.EscalationRecord.class),
+            typeEntry(ValueType.FORM.name(), Schema.FormRecord.class),
             typeEntry(ValueType.INCIDENT.name(), Schema.IncidentRecord.class),
             typeEntry(ValueType.JOB.name(), Schema.JobRecord.class),
             typeEntry(ValueType.JOB_BATCH.name(), Schema.JobBatchRecord.class),
@@ -43,7 +46,9 @@ public class ZeebeRedis implements AutoCloseable {
             typeEntry(ValueType.PROCESS_INSTANCE.name(), Schema.ProcessInstanceRecord.class),
             typeEntry(ValueType.PROCESS_INSTANCE_CREATION.name(), Schema.ProcessInstanceCreationRecord.class),
             typeEntry(ValueType.PROCESS_MESSAGE_SUBSCRIPTION.name(), Schema.ProcessMessageSubscriptionRecord.class),
+            typeEntry(ValueType.RESOURCE_DELETION.name(), Schema.ResourceDeletionRecord.class),
             typeEntry(ValueType.TIMER.name(), Schema.TimerRecord.class),
+            typeEntry(ValueType.USER_TASK.name(), Schema.UserTaskRecord.class),
             typeEntry(ValueType.VARIABLE.name(), Schema.VariableRecord.class),
             typeEntry(ValueType.VARIABLE_DOCUMENT.name(), Schema.VariableDocumentRecord.class));
   }

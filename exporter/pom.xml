@@ -89,6 +89,12 @@
                         <descriptor>assembly-jar-with-dependencies.xml</descriptor>
                     </descriptors>
                     <outputDirectory>${project.build.directory}</outputDirectory>
+                    <archive>
+                        <manifest>
+                            <AddDefaultImplementationEntries>true</AddDefaultImplementationEntries>
+                            <AddDefaultSpecificationEntries>true</AddDefaultSpecificationEntries>
+                        </manifest>
+                    </archive>
                 </configuration>
                 <executions>
                     <execution>

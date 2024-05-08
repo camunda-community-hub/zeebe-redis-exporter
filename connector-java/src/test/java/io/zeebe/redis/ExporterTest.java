@@ -33,6 +33,15 @@ public class ExporterTest {
           .endEvent("end")
           .done();
 
+  private static final BpmnModelInstance USER_TASK_WORKFLOW =
+          Bpmn.createExecutableProcess("user_task_process")
+                  .startEvent("start")
+                  .sequenceFlowId("to-task")
+                  .userTask("userTask", u -> u.zeebeUserTask().zeebeCandidateGroups("testGroup"))
+                  .sequenceFlowId("to-end")
+                  .endEvent("end")
+                  .done();
+
   private ZeebeClient client;
   private ZeebeRedis zeebeRedis1;
 
@@ -130,5 +139,49 @@ public class ExporterTest {
     assertThat(records1.size()).isGreaterThan(0);
     assertThat(records2.size()).isGreaterThan(0);
     assertThat(records1).doesNotContainAnyElementsOf(records2);
+  }
+
+  @Test
+  public void shouldListenToUserTaskEvents() {
+    // given
+    final List<Schema.DeploymentRecord> deploymentRecords = new ArrayList<>();
+    final List<Schema.UserTaskRecord> userTaskRecords = new ArrayList<>();
+
+    zeebeRedis1 =
+            ZeebeRedis.newBuilder(redisClient)
+                    .consumerGroup("ExporterTest").consumerId("consumer-1")
+                    .addDeploymentListener(deploymentRecords::add)
+                    .addUserTaskListener(userTaskRecords::add)
+                    .build();
+
+    // when
+    client.newDeployResourceCommand().addProcessModel(USER_TASK_WORKFLOW, "user-task.bpmn").send().join();
+
+    // then
+    Awaitility.await("await until the deployment is created")
+            .untilAsserted(
+                    () ->
+                            assertThat(deploymentRecords)
+                                    .extracting(r -> r.getMetadata().getIntent())
+                                    .contains(DeploymentIntent.CREATED.name()));
+
+    // when
+    client.newCreateInstanceCommand().bpmnProcessId("user_task_process").latestVersion().send().join();
+
+    // then
+    Awaitility.await("await until the user task is activated")
+            .untilAsserted(
+                    () ->
+                            assertThat(userTaskRecords)
+                                    .extracting(Schema.UserTaskRecord::getElementId)
+                                    .contains("userTask"));
+
+    assertThat(userTaskRecords.size()).isGreaterThan(0);
+    assertThat(userTaskRecords).filteredOn(u -> u.getElementId().equals("userTask")).first().satisfies(
+            u -> {
+              assertThat(u.getCandidateGroupCount()).isEqualTo(1);
+              assertThat(u.getCandidateGroup(0)).isEqualTo("testGroup");
+            }
+    );
   }
 }

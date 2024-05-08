@@ -216,6 +216,31 @@ public class RedisConnectionBuilder {
         return this;
     }
 
+    public RedisConnectionBuilder addFormListener(Consumer<Schema.FormRecord> listener) {
+        addListener(ValueType.FORM.name(), listener);
+        return this;
+    }
+
+    public RedisConnectionBuilder addResourceDeletionListener(Consumer<Schema.ResourceDeletionRecord> listener) {
+        addListener(ValueType.RESOURCE_DELETION.name(), listener);
+        return this;
+    }
+
+    public RedisConnectionBuilder addUserTaskListener(Consumer<Schema.UserTaskRecord> listener) {
+        addListener(ValueType.USER_TASK.name(), listener);
+        return this;
+    }
+
+    public RedisConnectionBuilder addCompensationSubscriptionListener(Consumer<Schema.CompensationSubscriptionRecord> listener) {
+        addListener(ValueType.COMPENSATION_SUBSCRIPTION.name(), listener);
+        return this;
+    }
+
+    public RedisConnectionBuilder addEscalationListener(Consumer<Schema.EscalationRecord> listener) {
+        addListener(ValueType.ESCALATION.name(), listener);
+        return this;
+    }
+
     /**
      * Start a background task that reads from Zeebe Streams.
      * <br>

@@ -58,7 +58,8 @@ public class RedisExporter implements Exporter {
     logger = context.getLogger();
     config = context.getConfiguration().instantiate(ExporterConfiguration.class);
 
-    logger.info("Starting Redis exporter with configuration: {}", config);
+    logger.info("Starting Redis exporter version {} with configuration: {}",
+            this.getClass().getPackage().getImplementationVersion(), config);
 
     streamPrefix = config.getName() + ":";
 
