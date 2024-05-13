@@ -299,6 +299,7 @@ namespace zeeb_redis_connector_test
                 Assert.True(userTaskRecords.Count >= 1);
                 Assert.All(userTaskRecords, r =>
                 {
+                    Assert.Equal(processInstance.ProcessInstanceKey, r.ProcessInstanceKey);
                     Assert.Equal(RecordMetadata.Types.ValueType.UserTask, r.Metadata.ValueType);
                 });
                 var userTaskIntent = userTaskRecords.Select(r => r.Metadata.Intent);
