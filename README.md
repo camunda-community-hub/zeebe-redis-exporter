@@ -347,6 +347,7 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClusterClient)
         .consumerGroup("MyApplication").consumerId("consumer-1")
         .addIncidentListener(incident -> { ... })
         .addJobListener(job -> { ... })
+        .addUserTaskListener(userTask -> { ... })
         .build();
 ```
 
