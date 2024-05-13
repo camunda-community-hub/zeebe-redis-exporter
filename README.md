@@ -53,6 +53,7 @@ final ZeebeRedis zeebeRedis = ZeebeRedis.newBuilder(redisClient)
         .addDeploymentListener(deployment -> { ... })
         .addIncidentListener(incident -> { ... })
         .addJobListener(job -> { ... })
+        .addUserTaskListener(userTask -> { ... })
         .build();
 
 // ...
