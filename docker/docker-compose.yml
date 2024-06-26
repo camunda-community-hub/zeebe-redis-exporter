@@ -7,7 +7,7 @@ networks:
 services:
   zeebe:
     container_name: zeebe_broker
-    image: camunda/zeebe:8.5.3
+    image: camunda/zeebe:8.5.4
     environment:
       - ZEEBE_LOG_LEVEL=debug
       - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
