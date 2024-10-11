@@ -14,7 +14,7 @@
     </parent>
 
     <properties>
-        <version.zeebe>8.5.7</version.zeebe>
+        <version.zeebe>8.6.1</version.zeebe>
         <version.exporter.protobuf>1.6.1</version.exporter.protobuf>
         <version.lettuce>6.4.0.RELEASE</version.lettuce>
         <version.log4j>2.24.1</version.log4j>
@@ -23,7 +23,7 @@
         <version.testcontainers>1.20.2</version.testcontainers>
 
         <plugin.version.maven-jar>3.4.2</plugin.version.maven-jar>
-        <version.java>11</version.java>
+        <version.java>17</version.java>
 
         <!-- release parent settings -->
         <nexus.snapshot.repository>https://artifacts.camunda.com/artifactory/zeebe-io-snapshots/
