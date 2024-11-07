@@ -121,7 +121,7 @@
             <plugin>
                 <groupId>com.google.cloud.tools</groupId>
                 <artifactId>jib-maven-plugin</artifactId>
-                <version>3.4.2</version> <!-- >= 3.4.3 hangs at 80% when building image! -->
+                <version>3.4.4</version> <!-- >= 3.4.3 hangs at 80% when building image! -->
                 <executions>
                     <execution>
                         <id>docker-local</id>
