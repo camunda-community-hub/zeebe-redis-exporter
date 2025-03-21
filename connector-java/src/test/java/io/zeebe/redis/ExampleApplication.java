@@ -2,7 +2,6 @@ package io.zeebe.redis;
 
 import io.lettuce.core.RedisClient;
 import io.zeebe.redis.connect.java.ZeebeRedis;
-
 import java.util.concurrent.CountDownLatch;
 
 public class ExampleApplication {

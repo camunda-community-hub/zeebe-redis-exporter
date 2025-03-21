@@ -9,9 +9,6 @@ import io.lettuce.core.support.AsyncConnectionPoolSupport;
 import io.lettuce.core.support.BoundedAsyncPool;
 import io.lettuce.core.support.BoundedPoolConfig;
 import io.zeebe.exporter.proto.Schema;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.util.AbstractMap;
@@ -20,40 +17,56 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class ZeebeRedis implements AutoCloseable {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(ZeebeRedis.class);
 
-  private static final Map <String, Class<? extends com.google.protobuf.Message>> RECORD_MESSAGE_TYPES;
+  private static final Map<String, Class<? extends com.google.protobuf.Message>>
+      RECORD_MESSAGE_TYPES;
 
   static {
-    RECORD_MESSAGE_TYPES = Map.ofEntries(
-            typeEntry(ValueType.COMPENSATION_SUBSCRIPTION.name(), Schema.CompensationSubscriptionRecord.class),
+    RECORD_MESSAGE_TYPES =
+        Map.ofEntries(
+            typeEntry(
+                ValueType.COMPENSATION_SUBSCRIPTION.name(),
+                Schema.CompensationSubscriptionRecord.class),
             typeEntry(ValueType.DEPLOYMENT.name(), Schema.DeploymentRecord.class),
-            typeEntry(ValueType.DEPLOYMENT_DISTRIBUTION.name(), Schema.DeploymentDistributionRecord.class),
+            typeEntry(
+                ValueType.DEPLOYMENT_DISTRIBUTION.name(),
+                Schema.DeploymentDistributionRecord.class),
             typeEntry(ValueType.ERROR.name(), Schema.ErrorRecord.class),
             typeEntry(ValueType.ESCALATION.name(), Schema.EscalationRecord.class),
             typeEntry(ValueType.FORM.name(), Schema.FormRecord.class),
             typeEntry(ValueType.INCIDENT.name(), Schema.IncidentRecord.class),
             typeEntry(ValueType.JOB.name(), Schema.JobRecord.class),
             typeEntry(ValueType.JOB_BATCH.name(), Schema.JobBatchRecord.class),
-            typeEntry(ValueType.MESSAGE_START_EVENT_SUBSCRIPTION.name(), Schema.MessageStartEventSubscriptionRecord.class),
-            typeEntry(ValueType.MESSAGE_SUBSCRIPTION.name(), Schema.MessageSubscriptionRecord.class),
+            typeEntry(
+                ValueType.MESSAGE_START_EVENT_SUBSCRIPTION.name(),
+                Schema.MessageStartEventSubscriptionRecord.class),
+            typeEntry(
+                ValueType.MESSAGE_SUBSCRIPTION.name(), Schema.MessageSubscriptionRecord.class),
             typeEntry(ValueType.MESSAGE.name(), Schema.MessageRecord.class),
             typeEntry(ValueType.PROCESS.name(), Schema.ProcessRecord.class),
             typeEntry(ValueType.PROCESS_EVENT.name(), Schema.ProcessEventRecord.class),
             typeEntry(ValueType.PROCESS_INSTANCE.name(), Schema.ProcessInstanceRecord.class),
-            typeEntry(ValueType.PROCESS_INSTANCE_CREATION.name(), Schema.ProcessInstanceCreationRecord.class),
-            typeEntry(ValueType.PROCESS_MESSAGE_SUBSCRIPTION.name(), Schema.ProcessMessageSubscriptionRecord.class),
+            typeEntry(
+                ValueType.PROCESS_INSTANCE_CREATION.name(),
+                Schema.ProcessInstanceCreationRecord.class),
+            typeEntry(
+                ValueType.PROCESS_MESSAGE_SUBSCRIPTION.name(),
+                Schema.ProcessMessageSubscriptionRecord.class),
             typeEntry(ValueType.RESOURCE_DELETION.name(), Schema.ResourceDeletionRecord.class),
             typeEntry(ValueType.TIMER.name(), Schema.TimerRecord.class),
             typeEntry(ValueType.USER_TASK.name(), Schema.UserTaskRecord.class),
             typeEntry(ValueType.VARIABLE.name(), Schema.VariableRecord.class),
             typeEntry(ValueType.VARIABLE_DOCUMENT.name(), Schema.VariableDocumentRecord.class));
   }
-  private static AbstractMap.SimpleEntry<String, Class<? extends com.google.protobuf.Message>> typeEntry(
-          String valueType, Class<? extends com.google.protobuf.Message> messageClass) {
+
+  private static AbstractMap.SimpleEntry<String, Class<? extends com.google.protobuf.Message>>
+      typeEntry(String valueType, Class<? extends com.google.protobuf.Message> messageClass) {
     return new AbstractMap.SimpleEntry<>(valueType, messageClass);
   }
 
@@ -89,15 +102,20 @@ public class ZeebeRedis implements AutoCloseable {
 
   private boolean shouldDestroyConsumerGroupOnClose;
 
-  protected ZeebeRedis(UniversalRedisClient redisClient,
-                       UniversalRedisConnection<String, byte[]> redisConnection,
-                       boolean reconnectUsesNewConnection, Duration reconnectInterval,
-                       int xreadBlockMillis, int xreadCount,
-                       String consumerGroup, String consumerId,
-                       String prefix, XReadArgs.StreamOffset<String>[] offsets,
-                       Map<String, List<Consumer<?>>> listeners,
-                       boolean deleteMessages,
-                       boolean shouldDestroyConsumerGroupOnClose) {
+  protected ZeebeRedis(
+      UniversalRedisClient redisClient,
+      UniversalRedisConnection<String, byte[]> redisConnection,
+      boolean reconnectUsesNewConnection,
+      Duration reconnectInterval,
+      int xreadBlockMillis,
+      int xreadCount,
+      String consumerGroup,
+      String consumerId,
+      String prefix,
+      XReadArgs.StreamOffset<String>[] offsets,
+      Map<String, List<Consumer<?>>> listeners,
+      boolean deleteMessages,
+      boolean shouldDestroyConsumerGroupOnClose) {
     this.redisClient = redisClient;
     this.redisConnection = redisConnection;
     this.reconnectUsesNewConnection = reconnectUsesNewConnection;
@@ -112,7 +130,8 @@ public class ZeebeRedis implements AutoCloseable {
     this.deleteMessages = deleteMessages;
     this.shouldDestroyConsumerGroupOnClose = shouldDestroyConsumerGroupOnClose;
     if (this.shouldDestroyConsumerGroupOnClose) {
-      LOGGER.warn("No Redis consumer group configured! Will use unique disposable group {}", consumerGroup);
+      LOGGER.warn(
+          "No Redis consumer group configured! Will use unique disposable group {}", consumerGroup);
     }
   }
 
@@ -128,9 +147,9 @@ public class ZeebeRedis implements AutoCloseable {
   protected void start() {
     if (redisClient.isCluster()) {
       CompletionStage<BoundedAsyncPool<StatefulRedisClusterConnection<String, byte[]>>> poolFuture =
-              AsyncConnectionPoolSupport.createBoundedObjectPoolAsync(() ->
-                              redisClient.getRedisClusterClient().connectAsync(new ProtobufCodec()),
-                      BoundedPoolConfig.builder().maxTotal(offsets.length).build());
+          AsyncConnectionPoolSupport.createBoundedObjectPoolAsync(
+              () -> redisClient.getRedisClusterClient().connectAsync(new ProtobufCodec()),
+              BoundedPoolConfig.builder().maxTotal(offsets.length).build());
       try {
         redisPool = poolFuture.toCompletableFuture().get();
       } catch (InterruptedException e) {
@@ -147,26 +166,29 @@ public class ZeebeRedis implements AutoCloseable {
       }
       if (reconnectUsesNewConnection) {
         // take care to not close the whole connection pool in case of failing cluster connections
-        LOGGER.warn("Parameter 'reconnectUsesNewConnection' has no effect when using RedisClusterClient.");
+        LOGGER.warn(
+            "Parameter 'reconnectUsesNewConnection' has no effect when using RedisClusterClient.");
         reconnectUsesNewConnection = false;
       }
     } else {
       // if we're not connected to a cluster we eventually handle reconnects ourselves
-      redisConnection.addListener(new RedisConnectionStateAdapter() {
-        public void onRedisConnected(RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
-          LOGGER.info("Redis reconnected.");
-        }
+      redisConnection.addListener(
+          new RedisConnectionStateAdapter() {
+            public void onRedisConnected(
+                RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
+              LOGGER.info("Redis reconnected.");
+            }
 
-        public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
-          if (forcedClose) return;
-          LOGGER.warn("Redis connection lost.");
-          if (reconnectUsesNewConnection) {
-            doClose();
-            reconnectExecutorService = Executors.newSingleThreadExecutor();
-            reconnectFuture = reconnectExecutorService.submit(ZeebeRedis.this::reconnect);
-          }
-        }
-      });
+            public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
+              if (forcedClose) return;
+              LOGGER.warn("Redis connection lost.");
+              if (reconnectUsesNewConnection) {
+                doClose();
+                reconnectExecutorService = Executors.newSingleThreadExecutor();
+                reconnectFuture = reconnectExecutorService.submit(ZeebeRedis.this::reconnect);
+              }
+            }
+          });
     }
     forcedClose = false;
     isClosed = false;
@@ -182,14 +204,18 @@ public class ZeebeRedis implements AutoCloseable {
         redisConnection = redisClient.connect(protobufCodec);
         LOGGER.info("Redis reconnected.");
         var syncStreamCommands = redisConnection.syncStreamCommands();
-        listeners.keySet().stream().forEach(stream -> {
-          try {
-            syncStreamCommands.xgroupCreate(XReadArgs.StreamOffset.from(stream, "0-0"), consumerGroup,
-                    XGroupCreateArgs.Builder.mkstream());
-          } catch (RedisBusyException ex) {
-            // NOOP: consumer group already exists
-          }
-        });
+        listeners.keySet().stream()
+            .forEach(
+                stream -> {
+                  try {
+                    syncStreamCommands.xgroupCreate(
+                        XReadArgs.StreamOffset.from(stream, "0-0"),
+                        consumerGroup,
+                        XGroupCreateArgs.Builder.mkstream());
+                  } catch (RedisBusyException ex) {
+                    // NOOP: consumer group already exists
+                  }
+                });
         start();
         return;
       } catch (InterruptedException ex) {
@@ -210,15 +236,18 @@ public class ZeebeRedis implements AutoCloseable {
     isClosed = true;
     if (shouldDestroyConsumerGroupOnClose) {
       var syncStreamCommands = redisConnection.syncStreamCommands();
-      Arrays.stream(offsets).forEach(o -> {
-        String stream = String.valueOf(o.getName());
-        LOGGER.trace("Destroying consumer group {} of stream {}", consumerGroup, stream);
-        try {
-          syncStreamCommands.xgroupDestroy(stream, consumerGroup);
-        } catch (Exception ex) {
-          LOGGER.error("Error destroying consumer group {} of stream {}", consumerGroup, stream);
-        }
-      });
+      Arrays.stream(offsets)
+          .forEach(
+              o -> {
+                String stream = String.valueOf(o.getName());
+                LOGGER.trace("Destroying consumer group {} of stream {}", consumerGroup, stream);
+                try {
+                  syncStreamCommands.xgroupDestroy(stream, consumerGroup);
+                } catch (Exception ex) {
+                  LOGGER.error(
+                      "Error destroying consumer group {} of stream {}", consumerGroup, stream);
+                }
+              });
     }
     forceClose();
   }
@@ -229,7 +258,11 @@ public class ZeebeRedis implements AutoCloseable {
   }
 
   private void doClose() {
-    LOGGER.info("Closing Consumer[group={}, id={}]. Stop reading from streams '{}*'.", consumerGroup, consumerId, prefix);
+    LOGGER.info(
+        "Closing Consumer[group={}, id={}]. Stop reading from streams '{}*'.",
+        consumerGroup,
+        consumerId,
+        prefix);
 
     isClosed = true;
 
@@ -271,18 +304,22 @@ public class ZeebeRedis implements AutoCloseable {
       }
     } else {
       for (XReadArgs.StreamOffset offset : offsets) {
-        redisPool.acquire().thenAcceptAsync(connection -> {
-          var universalRedisConnection = new UniversalRedisConnection(connection);
-          while (!isClosed) {
-            readNext(universalRedisConnection, offset);
-          }
-          redisPool.release(connection);
-        });
+        redisPool
+            .acquire()
+            .thenAcceptAsync(
+                connection -> {
+                  var universalRedisConnection = new UniversalRedisConnection(connection);
+                  while (!isClosed) {
+                    readNext(universalRedisConnection, offset);
+                  }
+                  redisPool.release(connection);
+                });
       }
     }
   }
 
-  private void readNext(UniversalRedisConnection redisConnection, XReadArgs.StreamOffset... offsets) {
+  private void readNext(
+      UniversalRedisConnection redisConnection, XReadArgs.StreamOffset... offsets) {
     if (offsets.length == 1) {
       LOGGER.trace("Consumer[id={}] reads from stream '{}'", consumerId, offsets[0].getName());
     } else {
@@ -291,12 +328,21 @@ public class ZeebeRedis implements AutoCloseable {
 
     try {
       var asyncStreamCommands = redisConnection.asyncStreamCommands();
-      List<StreamMessage<String, byte[]>> messages = (List<StreamMessage<String, byte[]>>) asyncStreamCommands
-              .xreadgroup(io.lettuce.core.Consumer.from(consumerGroup, consumerId),
-                      XReadArgs.Builder.block(xreadBlockMillis).count(xreadCount), offsets).get();
+      List<StreamMessage<String, byte[]>> messages =
+          (List<StreamMessage<String, byte[]>>)
+              asyncStreamCommands
+                  .xreadgroup(
+                      io.lettuce.core.Consumer.from(consumerGroup, consumerId),
+                      XReadArgs.Builder.block(xreadBlockMillis).count(xreadCount),
+                      offsets)
+                  .get();
 
       for (StreamMessage<String, byte[]> message : messages) {
-        LOGGER.trace("Consumer[id={}] received message {} from {}", consumerId, message.getId(), message.getStream());
+        LOGGER.trace(
+            "Consumer[id={}] received message {} from {}",
+            consumerId,
+            message.getId(),
+            message.getStream());
         var success = handleRecord(message);
         asyncStreamCommands.xack(message.getStream(), consumerGroup, message.getId());
         if (deleteMessages && success) {
@@ -314,13 +360,22 @@ public class ZeebeRedis implements AutoCloseable {
       }
     } catch (RedisCommandTimeoutException e) {
       if (!isClosed) {
-        LOGGER.debug("Consumer[group={}, id={}] timed out reading from streams '{}*'", consumerGroup, consumerId, prefix);
+        LOGGER.debug(
+            "Consumer[group={}, id={}] timed out reading from streams '{}*'",
+            consumerGroup,
+            consumerId,
+            prefix);
       }
     } catch (RedisCommandExecutionException e) {
       // should not happen, but we want to recover anyway
       redisConnection.releaseFromPool(redisPool);
       if (!isClosed) {
-        LOGGER.error("Consumer[group={}, id={}] failed to read from streams '{}*': {}. Initiating reconnect.", consumerGroup, consumerId, prefix, e.getMessage());
+        LOGGER.error(
+            "Consumer[group={}, id={}] failed to read from streams '{}*': {}. Initiating reconnect.",
+            consumerGroup,
+            consumerId,
+            prefix,
+            e.getMessage());
         try {
           forceClose();
         } catch (Exception closingFailure) {
@@ -332,11 +387,18 @@ public class ZeebeRedis implements AutoCloseable {
     } catch (Exception e) {
       // TODO: should not happen, should we recover like above?
       if (!isClosed) {
-        LOGGER.error("Consumer[group={}, id={}] failed to read from streams '{}*'", consumerGroup, consumerId, prefix, e);
+        LOGGER.error(
+            "Consumer[group={}, id={}] failed to read from streams '{}*'",
+            consumerGroup,
+            consumerId,
+            prefix,
+            e);
       }
     }
   }
-  private boolean handleRecord(StreamMessage<String, byte[]> message) throws InvalidProtocolBufferException {
+
+  private boolean handleRecord(StreamMessage<String, byte[]> message)
+      throws InvalidProtocolBufferException {
     final var messageValue = message.getBody().values().iterator().next();
     final var genericRecord = Schema.Record.parseFrom(messageValue);
     final var recordType = RECORD_MESSAGE_TYPES.get(message.getStream().substring(prefix.length()));
@@ -345,22 +407,30 @@ public class ZeebeRedis implements AutoCloseable {
       handleRecord(message.getStream(), genericRecord, recordType);
       return true;
     } catch (InvalidProtocolBufferException e) {
-      LOGGER.error("Failed to deserialize Protobuf message {} from {}", message.getId(), message.getStream(), e);
+      LOGGER.error(
+          "Failed to deserialize Protobuf message {} from {}",
+          message.getId(),
+          message.getStream(),
+          e);
       return true; // not interested in reading corrupt data again
     } catch (Exception ex) {
-      LOGGER.error("Error handling message {} from {}: {}", message.getId(), message.getStream(), ex.getMessage());
+      LOGGER.error(
+          "Error handling message {} from {}: {}",
+          message.getId(),
+          message.getStream(),
+          ex.getMessage());
       return false;
     }
   }
 
-  private <T extends com.google.protobuf.Message> void handleRecord(String stream,
-      Schema.Record genericRecord, Class<T> t) throws InvalidProtocolBufferException {
+  private <T extends com.google.protobuf.Message> void handleRecord(
+      String stream, Schema.Record genericRecord, Class<T> t)
+      throws InvalidProtocolBufferException {
     final var record = genericRecord.getRecord().unpack(t);
     LOGGER.trace("Consumer[id={}] handling record {}", consumerId, record);
 
     listeners
-      .getOrDefault(stream, List.of())
-      .forEach(listener -> ((Consumer<T>) listener).accept(record));
+        .getOrDefault(stream, List.of())
+        .forEach(listener -> ((Consumer<T>) listener).accept(record));
   }
-
 }

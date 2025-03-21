@@ -23,6 +23,7 @@
         <version.testcontainers>1.20.6</version.testcontainers>
 
         <plugin.version.maven-jar>3.4.2</plugin.version.maven-jar>
+        <plugin.version.maven-fmt>2.25</plugin.version.maven-fmt>
         <version.java>17</version.java>
 
         <!-- release parent settings -->
@@ -155,6 +156,20 @@
                     <!-- Override java source version to workaround javadoc bug https://bugs.openjdk.java.net/browse/JDK-8212233 -->
                     <source>8</source>
                 </configuration>
+            </plugin>
+
+            <!-- Google code format plugin -->
+            <plugin>
+                <groupId>com.spotify.fmt</groupId>
+                <artifactId>fmt-maven-plugin</artifactId>
+                <version>${plugin.version.maven-fmt}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>format</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
 

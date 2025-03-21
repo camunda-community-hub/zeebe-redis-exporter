@@ -1,7 +1,6 @@
 package io.zeebe.redis.exporter;
 
 import io.lettuce.core.RedisURI;
-
 import java.time.Duration;
 import java.util.Optional;
 
@@ -38,15 +37,21 @@ public class ExporterConfiguration {
   }
 
   public long getMinTimeToLiveInSeconds() {
-    return getEnv("MIN_TIME_TO_LIVE_IN_SECONDS").map(Long::parseLong).orElse(minTimeToLiveInSeconds);
+    return getEnv("MIN_TIME_TO_LIVE_IN_SECONDS")
+        .map(Long::parseLong)
+        .orElse(minTimeToLiveInSeconds);
   }
 
   public long getMaxTimeToLiveInSeconds() {
-    return getEnv("MAX_TIME_TO_LIVE_IN_SECONDS").map(Long::parseLong).orElse(maxTimeToLiveInSeconds);
+    return getEnv("MAX_TIME_TO_LIVE_IN_SECONDS")
+        .map(Long::parseLong)
+        .orElse(maxTimeToLiveInSeconds);
   }
 
   public boolean isDeleteAfterAcknowledge() {
-    return getEnv("DELETE_AFTER_ACKNOWLEDGE").map(Boolean::parseBoolean).orElse(deleteAfterAcknowledge);
+    return getEnv("DELETE_AFTER_ACKNOWLEDGE")
+        .map(Boolean::parseBoolean)
+        .orElse(deleteAfterAcknowledge);
   }
 
   public int getIoThreadPoolSize() {
@@ -79,9 +84,9 @@ public class ExporterConfiguration {
 
   public Optional<RedisURI> getRemoteAddress() {
     return getEnv("REMOTE_ADDRESS")
-            .or(() -> Optional.ofNullable(remoteAddress))
-            .filter(remoteAddress -> !remoteAddress.isEmpty())
-            .map(RedisURI::create);
+        .or(() -> Optional.ofNullable(remoteAddress))
+        .filter(remoteAddress -> !remoteAddress.isEmpty())
+        .map(RedisURI::create);
   }
 
   public boolean isUseClusterClient() {
@@ -94,20 +99,39 @@ public class ExporterConfiguration {
 
   @Override
   public String toString() {
-    return "[" +
-            "remoteAddress='" + getRemoteAddress() + '\'' +
-            ", useClusterClient='" + isUseClusterClient() + '\'' +
-            ", enabledValueTypes='" + getEnabledValueTypes() + '\'' +
-            ", enabledRecordTypes='" + getEnabledRecordTypes() + '\'' +
-            ", format='" + getFormat() + '\'' +
-            ", name='" + getName() + '\'' +
-            ", cleanupCycleInSeconds=" + getCleanupCycleInSeconds() +
-            ", minTimeToLiveInSeconds=" + getMinTimeToLiveInSeconds() +
-            ", maxTimeToLiveInSeconds=" + getMaxTimeToLiveInSeconds() +
-            ", deleteAfterAcknowledge=" + isDeleteAfterAcknowledge() +
-            ", ioThreadPoolSize=" + getIoThreadPoolSize() +
-            ", batchSize=" + getBatchSize() +
-            ", batchCycleMillis=" + getBatchCycleMillis() +
-            ']';
+    return "["
+        + "remoteAddress='"
+        + getRemoteAddress()
+        + '\''
+        + ", useClusterClient='"
+        + isUseClusterClient()
+        + '\''
+        + ", enabledValueTypes='"
+        + getEnabledValueTypes()
+        + '\''
+        + ", enabledRecordTypes='"
+        + getEnabledRecordTypes()
+        + '\''
+        + ", format='"
+        + getFormat()
+        + '\''
+        + ", name='"
+        + getName()
+        + '\''
+        + ", cleanupCycleInSeconds="
+        + getCleanupCycleInSeconds()
+        + ", minTimeToLiveInSeconds="
+        + getMinTimeToLiveInSeconds()
+        + ", maxTimeToLiveInSeconds="
+        + getMaxTimeToLiveInSeconds()
+        + ", deleteAfterAcknowledge="
+        + isDeleteAfterAcknowledge()
+        + ", ioThreadPoolSize="
+        + getIoThreadPoolSize()
+        + ", batchSize="
+        + getBatchSize()
+        + ", batchCycleMillis="
+        + getBatchCycleMillis()
+        + ']';
   }
 }

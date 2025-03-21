@@ -1,5 +1,7 @@
 package io.zeebe.redis;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.camunda.zeebe.model.bpmn.Bpmn;
 import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
 import io.lettuce.core.*;
@@ -15,8 +17,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 @Testcontainers
 @ExtendWith(OnFailureExtension.class)
 public class ExporterTest {
@@ -31,16 +31,15 @@ public class ExporterTest {
           .done();
 
   private static final BpmnModelInstance USER_TASK_WORKFLOW =
-          Bpmn.createExecutableProcess("user_task_process")
-                  .startEvent("start")
-                  .sequenceFlowId("to-task")
-                  .userTask("userTask", u -> u.zeebeUserTask().zeebeCandidateGroups("testGroup"))
-                  .sequenceFlowId("to-end")
-                  .endEvent("end")
-                  .done();
+      Bpmn.createExecutableProcess("user_task_process")
+          .startEvent("start")
+          .sequenceFlowId("to-task")
+          .userTask("userTask", u -> u.zeebeUserTask().zeebeCandidateGroups("testGroup"))
+          .sequenceFlowId("to-end")
+          .endEvent("end")
+          .done();
 
-  @Container
-  public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withDefaultConfig();
+  @Container public ZeebeTestContainer zeebeContainer = ZeebeTestContainer.withDefaultConfig();
 
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;
@@ -62,12 +61,17 @@ public class ExporterTest {
   @Test
   public void shouldExportEventsAsProtobuf() throws Exception {
     // given
-    zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process.bpmn").send().join();
+    zeebeContainer
+        .getClient()
+        .newDeployResourceCommand()
+        .addProcessModel(WORKFLOW, "process.bpmn")
+        .send()
+        .join();
     Thread.sleep(1000);
 
     // when
-    final var message = redisConnection.sync()
-            .xrange("zeebe:DEPLOYMENT", Range.create("-", "+")).get(0);
+    final var message =
+        redisConnection.sync().xrange("zeebe:DEPLOYMENT", Range.create("-", "+")).get(0);
 
     // then
     assertThat(message).isNotNull();
@@ -84,16 +88,28 @@ public class ExporterTest {
   @Test
   public void shouldSupportConsumerGroups() throws Exception {
     // given
-    zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process.bpmn").send().join();
-    redisConnection.sync().xgroupCreate(XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"), "application_1",
+    zeebeContainer
+        .getClient()
+        .newDeployResourceCommand()
+        .addProcessModel(WORKFLOW, "process.bpmn")
+        .send()
+        .join();
+    redisConnection
+        .sync()
+        .xgroupCreate(
+            XReadArgs.StreamOffset.from("zeebe:DEPLOYMENT", "0-0"),
+            "application_1",
             XGroupCreateArgs.Builder.mkstream());
     Thread.sleep(1000);
 
     // when
-    var messages = redisConnection.sync()
-            .xreadgroup(Consumer.from("application_1", "consumer_1"),
-                    XReadArgs.Builder.block(6000),
-                    XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
+    var messages =
+        redisConnection
+            .sync()
+            .xreadgroup(
+                Consumer.from("application_1", "consumer_1"),
+                XReadArgs.Builder.block(6000),
+                XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
 
     // then
     assertThat(messages.size()).isGreaterThan(0);
@@ -103,25 +119,40 @@ public class ExporterTest {
       final var record = Schema.Record.parseFrom(messageValue);
       assertThat(record.getRecord().is(Schema.DeploymentRecord.class)).isTrue();
 
-      redisConnection.async().xack("zeebe:DEPLOYMENT",  "application_1",  message.getId());
-    };
+      redisConnection.async().xack("zeebe:DEPLOYMENT", "application_1", message.getId());
+    }
+    ;
 
-    messages = redisConnection.sync()
-            .xreadgroup(Consumer.from("application_1", "consumer_1"),
-                    XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
+    messages =
+        redisConnection
+            .sync()
+            .xreadgroup(
+                Consumer.from("application_1", "consumer_1"),
+                XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
     assertThat(messages.size()).isEqualTo(0);
   }
 
   @Test
   public void shouldExportUserTaskEvents() throws Exception {
     // given
-    zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(USER_TASK_WORKFLOW, "user-task.bpmn").send().join();
-    zeebeContainer.getClient().newCreateInstanceCommand().bpmnProcessId("user_task_process").latestVersion().send().join();
+    zeebeContainer
+        .getClient()
+        .newDeployResourceCommand()
+        .addProcessModel(USER_TASK_WORKFLOW, "user-task.bpmn")
+        .send()
+        .join();
+    zeebeContainer
+        .getClient()
+        .newCreateInstanceCommand()
+        .bpmnProcessId("user_task_process")
+        .latestVersion()
+        .send()
+        .join();
     Thread.sleep(1000);
 
     // when
-    final var message = redisConnection.sync()
-            .xrange("zeebe:USER_TASK", Range.create("-", "+")).get(0);
+    final var message =
+        redisConnection.sync().xrange("zeebe:USER_TASK", Range.create("-", "+")).get(0);
 
     // then
     assertThat(message).isNotNull();

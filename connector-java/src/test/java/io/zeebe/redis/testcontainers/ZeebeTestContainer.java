@@ -6,70 +6,72 @@ import org.testcontainers.utility.DockerImageName;
 
 public class ZeebeTestContainer extends ZeebeContainer {
 
-    private RedisContainer redisContainer;
+  private RedisContainer redisContainer;
 
-    private ZeebeClient zeebeClient;
+  private ZeebeClient zeebeClient;
 
-    protected ZeebeTestContainer(RedisContainer redisContainer) {
-        super(DockerImageName.parse("ghcr.io/camunda-community-hub/zeebe-with-redis-exporter"));
-        withExposedPorts(26500,9600);
-        dependsOn(redisContainer);
-        this.redisContainer = redisContainer;
+  protected ZeebeTestContainer(RedisContainer redisContainer) {
+    super(DockerImageName.parse("ghcr.io/camunda-community-hub/zeebe-with-redis-exporter"));
+    withExposedPorts(26500, 9600);
+    dependsOn(redisContainer);
+    this.redisContainer = redisContainer;
+  }
+
+  public static ZeebeTestContainer withDefaultConfig() {
+    return new ZeebeTestContainer(new RedisContainer());
+  }
+
+  public static ZeebeTestContainer withJsonFormat() {
+    ZeebeTestContainer container = withDefaultConfig();
+    container.withEnv("ZEEBE_REDIS_FORMAT", "json");
+    return container;
+  }
+
+  public static ZeebeTestContainer withMaxTTLInSeconds(long maxTimeToLiveInSeconds) {
+    ZeebeTestContainer container = withDefaultConfig();
+    container.withEnv(
+        "ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS", Long.toString(maxTimeToLiveInSeconds));
+    return container;
+  }
+
+  public ZeebeClient getClient() {
+    if (zeebeClient == null) {
+      zeebeClient =
+          ZeebeClient.newClientBuilder()
+              .gatewayAddress(getExternalGatewayAddress())
+              .usePlaintext()
+              .build();
     }
+    return zeebeClient;
+  }
 
-    public static ZeebeTestContainer withDefaultConfig() {
-        return new ZeebeTestContainer(new RedisContainer());
+  @Override
+  public void start() {
+    if (redisContainer != null) {
+      redisContainer.start();
+      withNetwork(redisContainer.getNetwork());
+      withEnv("ZEEBE_REDIS_REMOTE_ADDRESS", "redis://" + redisContainer.getRedisServerAddress());
     }
+    super.start();
+  }
 
-    public static ZeebeTestContainer withJsonFormat() {
-        ZeebeTestContainer container = withDefaultConfig();
-        container.withEnv("ZEEBE_REDIS_FORMAT", "json");
-        return container;
+  @Override
+  public void stop() {
+    if (zeebeClient != null) {
+      zeebeClient.close();
     }
+    zeebeClient = null;
+    super.stop();
+    if (redisContainer != null) {
+      redisContainer.stop();
+    }
+  }
 
-    public static ZeebeTestContainer withMaxTTLInSeconds(long maxTimeToLiveInSeconds) {
-        ZeebeTestContainer container = withDefaultConfig();
-        container.withEnv("ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS", Long.toString(maxTimeToLiveInSeconds));
-        return container;
-    }
+  public RedisContainer getRedisContainer() {
+    return redisContainer;
+  }
 
-    public ZeebeClient getClient() {
-        if (zeebeClient == null) {
-            zeebeClient = ZeebeClient.newClientBuilder()
-                    .gatewayAddress(getExternalGatewayAddress())
-                    .usePlaintext()
-                    .build();
-        }
-        return zeebeClient;
-    }
-
-    @Override
-    public void start() {
-        if (redisContainer != null) {
-            redisContainer.start();
-            withNetwork(redisContainer.getNetwork());
-            withEnv("ZEEBE_REDIS_REMOTE_ADDRESS", "redis://" + redisContainer.getRedisServerAddress());
-        }
-        super.start();
-    }
-
-    @Override
-    public void stop() {
-        if (zeebeClient != null) {
-            zeebeClient.close();
-        }
-        zeebeClient = null;
-        super.stop();
-        if (redisContainer != null) {
-            redisContainer.stop();
-        }
-    }
-
-    public RedisContainer getRedisContainer() {
-        return redisContainer;
-    }
-
-    public String getRedisAddress() {
-        return "redis://" + redisContainer.getRedisServerExternalAddress();
-    }
+  public String getRedisAddress() {
+    return "redis://" + redisContainer.getRedisServerExternalAddress();
+  }
 }

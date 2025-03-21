@@ -3,7 +3,6 @@ package io.zeebe.redis.exporter;
 import io.camunda.zeebe.exporter.api.context.Context;
 import io.camunda.zeebe.protocol.record.RecordType;
 import io.camunda.zeebe.protocol.record.ValueType;
-
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;

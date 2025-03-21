@@ -1,5 +1,7 @@
 package io.zeebe.redis;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.camunda.zeebe.model.bpmn.Bpmn;
 import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
 import io.lettuce.core.Range;
@@ -8,6 +10,7 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.zeebe.redis.exporter.ProtobufCodec;
 import io.zeebe.redis.testcontainers.OnFailureExtension;
 import io.zeebe.redis.testcontainers.ZeebeTestContainer;
+import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,10 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.shaded.org.awaitility.Awaitility;
-
-import java.time.Duration;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 @ExtendWith(OnFailureExtension.class)
@@ -34,8 +33,8 @@ public class ExporterMaxTimeToLiveTest {
           .done();
 
   @Container
-  public ZeebeTestContainer zeebeContainer = ZeebeTestContainer
-          .withCleanupCycleInSeconds(2).andUseMaxTTLInSeconds(6);
+  public ZeebeTestContainer zeebeContainer =
+      ZeebeTestContainer.withCleanupCycleInSeconds(2).andUseMaxTTLInSeconds(6);
 
   private RedisClient redisClient;
   private StatefulRedisConnection<String, byte[]> redisConnection;
@@ -57,10 +56,15 @@ public class ExporterMaxTimeToLiveTest {
   @Test
   public void shouldConsiderMaxTimeToLive() throws Exception {
     // given
-    zeebeContainer.getClient().newDeployResourceCommand().addProcessModel(WORKFLOW, "process.bpmn").send().join();
+    zeebeContainer
+        .getClient()
+        .newDeployResourceCommand()
+        .addProcessModel(WORKFLOW, "process.bpmn")
+        .send()
+        .join();
     Thread.sleep(1000);
-    final var message = redisConnection.sync()
-            .xrange("zeebe:DEPLOYMENT", Range.create("-", "+")).get(0);
+    final var message =
+        redisConnection.sync().xrange("zeebe:DEPLOYMENT", Range.create("-", "+")).get(0);
     assertThat(message).isNotNull();
     var deploymentLen = redisConnection.sync().xlen("zeebe:DEPLOYMENT");
     assertThat(deploymentLen).isGreaterThan(0);
@@ -71,7 +75,11 @@ public class ExporterMaxTimeToLiveTest {
     // then
     assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(deploymentLen);
     Thread.sleep(5000);
-    Awaitility.await().pollInterval(Duration.ofMillis(500)).atMost(Duration.ofSeconds(5)).pollInSameThread()
-            .untilAsserted(() -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(0));
+    Awaitility.await()
+        .pollInterval(Duration.ofMillis(500))
+        .atMost(Duration.ofSeconds(5))
+        .pollInSameThread()
+        .untilAsserted(
+            () -> assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(0));
   }
 }
