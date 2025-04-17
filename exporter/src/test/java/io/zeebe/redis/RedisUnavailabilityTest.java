@@ -90,7 +90,9 @@ public class RedisUnavailabilityTest {
     redisClient = RedisClient.create(zeebeContainer.getRedisAddress());
     redisConnection = redisClient.connect();
     consumer.waitUntil(
-        frame -> frame.getUtf8String().contains("Reconnected to redis"), 20, TimeUnit.SECONDS);
+        frame -> frame.getUtf8String().contains("Redis connection re-established"),
+        20,
+        TimeUnit.SECONDS);
     redisConnection
         .sync()
         .xgroupCreate(

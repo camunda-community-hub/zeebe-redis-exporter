@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 
@@ -35,15 +36,29 @@ public class RedisSender {
     this.redisConnection.setAutoFlushCommands(false);
     this.redisConnection.addListener(
         new RedisConnectionStateListener() {
+          private final AtomicLong disconnectAtSystemTime = new AtomicLong(-1);
+
           @Override
           public void onRedisConnected(
               RedisChannelHandler<?, ?> connection, SocketAddress socketAddress) {
             redisConnected.set(true);
+            if (disconnectAtSystemTime.get() >= 0) {
+              logger.info(
+                  "Redis connection re-established to {} after {} ms",
+                  configuration.getRemoteAddress().get(),
+                  System.currentTimeMillis() - disconnectAtSystemTime.get());
+              disconnectAtSystemTime.set(-1);
+            } else {
+              logger.info(
+                  "Redis connection re-established to {}", configuration.getRemoteAddress().get());
+            }
           }
 
           @Override
           public void onRedisDisconnected(RedisChannelHandler<?, ?> connection) {
             redisConnected.set(false);
+            disconnectAtSystemTime.set(System.currentTimeMillis());
+            logger.warn("Redis connection failure to {}", configuration.getRemoteAddress().get());
           }
         });
   }
