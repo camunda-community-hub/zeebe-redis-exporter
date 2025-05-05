@@ -23,7 +23,7 @@ services:
 
   redis:
     container_name: redis_cache
-    image: redis:7-alpine
+    image: redis:8-alpine
     ports:
       - "6379:6379"
     networks:
