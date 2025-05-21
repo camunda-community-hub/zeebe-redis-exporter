@@ -8,6 +8,7 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisConnectionException;
 import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.resource.ClientResources;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.zeebe.exporter.proto.RecordTransformer;
 import io.zeebe.exporter.proto.Schema;
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ public class RedisExporter implements Exporter {
   private UniversalRedisClient redisClient;
   private UniversalRedisConnection<String, ?> cleanupConnection;
   private UniversalRedisConnection<String, ?> senderConnection;
-  private Function<Record, ?> recordTransformer;
+  private Function<Record, TransformedRecord> recordTransformer;
 
   private boolean useProtoBuf = false;
 
@@ -40,6 +41,8 @@ public class RedisExporter implements Exporter {
   private RedisSender redisSender;
 
   private Controller controller;
+
+  private MeterRegistry meterRegistry;
 
   // The ExecutorService allows to schedule a regular task independent of the actual load
   // which controller.scheduleCancellableTask sadly didn't do.
@@ -55,6 +58,7 @@ public class RedisExporter implements Exporter {
   @Override
   public void configure(Context context) {
     logger = context.getLogger();
+    meterRegistry = context.getMeterRegistry();
     config = context.getConfiguration().instantiate(ExporterConfiguration.class);
 
     logger.info(
@@ -153,7 +157,7 @@ public class RedisExporter implements Exporter {
           "Initializing Redis sender with batch size {} and cycle {} milliseconds",
           config.getBatchSize(),
           config.getBatchCycleMillis());
-      redisSender = new RedisSender(config, controller, senderConnection, logger);
+      redisSender = new RedisSender(config, controller, senderConnection, meterRegistry, logger);
       senderThread.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
     }
 
@@ -213,8 +217,13 @@ public class RedisExporter implements Exporter {
   @Override
   public void export(Record record) {
     final String stream = streamPrefix.concat(record.getValueType().name());
+    final TransformedRecord transformedRecord = recordTransformer.apply(record);
     final RedisEvent redisEvent =
-        new RedisEvent(stream, System.currentTimeMillis(), recordTransformer.apply(record));
+        new RedisEvent(
+            stream,
+            System.currentTimeMillis(),
+            transformedRecord.value,
+            transformedRecord.memorySize);
     eventQueue.addEvent(new ImmutablePair<>(record.getPosition(), redisEvent));
     redisCleaner.considerStream(stream);
   }
@@ -224,13 +233,15 @@ public class RedisExporter implements Exporter {
     senderThread.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
   }
 
-  private byte[] recordToProtobuf(Record record) {
+  private TransformedRecord recordToProtobuf(Record record) {
     final Schema.Record dto = RecordTransformer.toGenericRecord(record);
-    return dto.toByteArray();
+    var value = dto.toByteArray();
+    return new TransformedRecord(value, value.length);
   }
 
-  private String recordToJson(Record record) {
-    return record.toJson();
+  private TransformedRecord recordToJson(Record record) {
+    var value = record.toJson();
+    return new TransformedRecord(value, 2 * value.length() + 38);
   }
 
   private void trimStreamValues() {
@@ -238,4 +249,6 @@ public class RedisExporter implements Exporter {
     cleanerThread.schedule(
         this::trimStreamValues, config.getCleanupCycleInSeconds(), TimeUnit.SECONDS);
   }
+
+  private record TransformedRecord(Object value, int memorySize) {}
 }

@@ -365,6 +365,18 @@ experience errors saying `CROSSSLOT Keys in request don't hash to the same slot`
 In the case of Redis clusters each stream (which corresponds to a Zeebe `ValueType`) will end up in its own shard.
 The connector - if initialized correctly with the `RedisClusterClient` - then uses multiple connections to read from each stream individually based on the asynchronous connection pool support of Lettuce.
 
+### Obtaining Metrics
+*Since 1.0.4*
+
+The Redis Exporter provides metrics via Spring Boot Actuator similar to the OpenSearch Exporter:
+
+* `zeebe.redis.exporter.bulk.memory.size` - Exporter bulk memory size
+* `zeebe.redis.exporter.bulk.size` - Exporter bulk size
+* `zeebe.redis.exporter.flush.duration.seconds` - Flush duration of bulk exporters in seconds
+* `zeebe.redis.exporter.failed.flush` - Number of failed flush operations
+ 
+Metrics are recorded each batch cycle and are related to the sum of all events exported during such a single cycle.
+
 ## Build it from Source
 
 The exporter and the Java connector can be built with Maven

@@ -17,6 +17,8 @@
         <version.zeebe>8.7.3</version.zeebe>
         <version.exporter.protobuf>1.6.1</version.exporter.protobuf>
         <version.lettuce>6.6.0.RELEASE</version.lettuce>
+        <!-- micrometer version see https://github.com/camunda/camunda/blob/main/parent/pom.xml -->
+        <version.micrometer>1.14.7</version.micrometer>
         <version.log4j>2.24.3</version.log4j>
         <version.zeebe.testcontainers>3.6.5</version.zeebe.testcontainers>
         <version.junit>5.12.2</version.junit>
@@ -77,6 +79,12 @@
             </dependency>
 
             <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-core</artifactId>
+                <version>${version.micrometer}</version>
+            </dependency>
+
+            <dependency>
                 <groupId>io.zeebe</groupId>
                 <artifactId>zeebe-test-container</artifactId>
                 <version>${version.zeebe.testcontainers}</version>
@@ -102,8 +110,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-
-
 
             <dependency>
                 <groupId>org.assertj</groupId>
