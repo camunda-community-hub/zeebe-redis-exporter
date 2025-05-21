@@ -18,7 +18,7 @@
         <version.exporter.protobuf>1.6.1</version.exporter.protobuf>
         <version.lettuce>6.6.0.RELEASE</version.lettuce>
         <!-- micrometer version see https://github.com/camunda/camunda/blob/main/parent/pom.xml -->
-        <version.micrometer>1.14.7</version.micrometer>
+        <version.micrometer>1.15.0</version.micrometer>
         <version.log4j>2.24.3</version.log4j>
         <version.zeebe.testcontainers>3.6.5</version.zeebe.testcontainers>
         <version.junit>5.12.2</version.junit>
