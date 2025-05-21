@@ -8,7 +8,7 @@
 
 Export records from [Zeebe](https://github.com/camunda-cloud/zeebe) to [Redis](https://redis.io/). Redis is an in-memory data store which is used as a transport layer.
 
-![How it works](how-it-works.png)
+![How it works](docs/how-it-works.png)
 
 The records are transformed into [Protobuf](https://github.com/camunda-community-hub/zeebe-exporter-protobuf) and added to [Redis Streams](https://redis.io/docs/data-types/streams-tutorial/). The exporter provides a time based history cleanup including an optional "delete-after-acknowledge" feature for streamed data.
 
@@ -376,6 +376,9 @@ The Redis Exporter provides metrics via Spring Boot Actuator similar to the Open
 * `zeebe.redis.exporter.failed.flush` - Number of failed flush operations
  
 Metrics are recorded each batch cycle and are related to the sum of all events exported during such a single cycle.
+
+* For a sample Grafana dashboard see [zeebe-redis.json](docs/zeebe-redis.json)
+* For more about Zeebe metrics go to [Camunda 8 Docs | Operational guides > Monitoring > Metrics](https://docs.camunda.io/docs/self-managed/operational-guides/monitoring/metrics/) 
 
 ## Build it from Source
 
