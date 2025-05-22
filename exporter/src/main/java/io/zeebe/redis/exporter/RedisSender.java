@@ -68,7 +68,7 @@ public class RedisSender {
   }
 
   void sendFrom(EventQueue eventQueue) {
-    if (!redisConnected.get() || !sendDeQueue()) {
+    if (!redisConnected.get() || !sendDeQueue() || eventQueue.isEmpty()) {
       return;
     }
     int recordBulkSize = 0;
@@ -146,10 +146,10 @@ public class RedisSender {
         controller.updateLastExportedRecordPosition(positionOfLastRecordInBatch);
         logger.debug("Exported {} dequeued events to Redis", futures.size());
         deQueue.clear();
+        redisMetrics.recordBulkSize(recordBulkSize);
+        redisMetrics.recordBulkMemorySize(recordBulkMemorySize);
         return true;
       }
-      redisMetrics.recordBulkSize(recordBulkSize);
-      redisMetrics.recordBulkMemorySize(recordBulkMemorySize);
     } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
       redisMetrics.recordFailedFlush();
       logger.error(

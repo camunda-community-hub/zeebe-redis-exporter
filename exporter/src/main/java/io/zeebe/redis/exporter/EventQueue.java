@@ -15,4 +15,8 @@ public class EventQueue {
   public ImmutablePair<Long, RedisEvent> getNextEvent() {
     return queue.poll();
   }
+
+  public boolean isEmpty() {
+    return queue.isEmpty();
+  }
 }
