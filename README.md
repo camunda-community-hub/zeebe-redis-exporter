@@ -377,6 +377,8 @@ The Redis Exporter provides metrics via Spring Boot Actuator similar to the Open
  
 Metrics are recorded each batch cycle and are related to the sum of all events exported during such a single cycle.
 
+![Redis Exporter Metrics Dashboard](docs/redis-exporter-metrics.png)
+
 * For a sample Grafana dashboard see [zeebe-redis.json](docs/zeebe-redis.json)
 * For more about Zeebe metrics go to [Camunda 8 Docs | Operational guides > Monitoring > Metrics](https://docs.camunda.io/docs/self-managed/operational-guides/monitoring/metrics/) 
 
