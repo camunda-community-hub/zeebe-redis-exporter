@@ -26,6 +26,8 @@ public class RedisSender {
 
   private final List<ImmutablePair<Long, RedisEvent>> deQueue = new ArrayList<>();
 
+  private final AtomicBoolean metricsBulkRecorded = new AtomicBoolean(false);
+
   public RedisSender(
       ExporterConfiguration configuration,
       Controller controller,
@@ -69,6 +71,12 @@ public class RedisSender {
 
   void sendFrom(EventQueue eventQueue) {
     if (!redisConnected.get() || !sendDeQueue() || eventQueue.isEmpty()) {
+      if (metricsBulkRecorded.get()) {
+        // set back bulk metric values to 0 once because there is nothing to send
+        redisMetrics.recordBulkSize(0);
+        redisMetrics.recordBulkMemorySize(0);
+        metricsBulkRecorded.set(false);
+      }
       return;
     }
     int recordBulkSize = 0;
@@ -109,6 +117,7 @@ public class RedisSender {
       }
       redisMetrics.recordBulkSize(recordBulkSize);
       redisMetrics.recordBulkMemorySize(recordBulkMemorySize);
+      metricsBulkRecorded.set(true);
     } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
       redisMetrics.recordFailedFlush();
       logger.error(
@@ -148,6 +157,7 @@ public class RedisSender {
         deQueue.clear();
         redisMetrics.recordBulkSize(recordBulkSize);
         redisMetrics.recordBulkMemorySize(recordBulkMemorySize);
+        metricsBulkRecorded.set(true);
         return true;
       }
     } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
