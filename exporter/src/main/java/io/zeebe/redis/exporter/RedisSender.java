@@ -27,6 +27,8 @@ public class RedisSender {
   private final List<ImmutablePair<Long, RedisEvent>> deQueue = new ArrayList<>();
 
   private final AtomicBoolean metricsBulkRecorded = new AtomicBoolean(false);
+  private final AtomicLong lastRecordedBulk = new AtomicLong(Long.MAX_VALUE);
+  private static final long RESET_METRICS_AFTER_MILLIS = 5000L;
 
   public RedisSender(
       ExporterConfiguration configuration,
@@ -71,7 +73,7 @@ public class RedisSender {
 
   void sendFrom(EventQueue eventQueue) {
     if (!redisConnected.get() || !sendDeQueue() || eventQueue.isEmpty()) {
-      if (metricsBulkRecorded.get()) {
+      if (metricsBulkRecorded.get() && isMetricsWatchStopped()) {
         // set back bulk metric values to 0 once because there is nothing to send
         redisMetrics.recordBulkSize(0);
         redisMetrics.recordBulkMemorySize(0);
@@ -118,6 +120,7 @@ public class RedisSender {
       redisMetrics.recordBulkSize(recordBulkSize);
       redisMetrics.recordBulkMemorySize(recordBulkMemorySize);
       metricsBulkRecorded.set(true);
+      startMetricsStopWatch();
     } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
       redisMetrics.recordFailedFlush();
       logger.error(
@@ -158,6 +161,7 @@ public class RedisSender {
         redisMetrics.recordBulkSize(recordBulkSize);
         redisMetrics.recordBulkMemorySize(recordBulkMemorySize);
         metricsBulkRecorded.set(true);
+        startMetricsStopWatch();
         return true;
       }
     } catch (RedisCommandTimeoutException | RedisConnectionException ex) {
@@ -170,5 +174,13 @@ public class RedisSender {
       logger.error("Error when sending dequeued events to Redis", ex);
     }
     return false;
+  }
+
+  private void startMetricsStopWatch() {
+    lastRecordedBulk.set(System.currentTimeMillis());
+  }
+
+  private boolean isMetricsWatchStopped() {
+    return System.currentTimeMillis() - lastRecordedBulk.get() > RESET_METRICS_AFTER_MILLIS;
   }
 }
