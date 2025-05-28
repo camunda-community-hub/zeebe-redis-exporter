@@ -28,7 +28,8 @@ public class RedisSender {
 
   private final AtomicBoolean metricsBulkRecorded = new AtomicBoolean(false);
   private final AtomicLong lastRecordedBulk = new AtomicLong(Long.MAX_VALUE);
-  // best practice default scrape interval for metrics is 60 seconds, hence wait 60s before resetting to 0
+  // best practice default scrape interval for metrics is 60 seconds, hence wait 60s before
+  // resetting to 0
   private static final long RESET_METRICS_AFTER_MILLIS = 60000L;
 
   public RedisSender(
