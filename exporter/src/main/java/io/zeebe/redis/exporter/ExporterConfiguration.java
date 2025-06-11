@@ -142,6 +142,10 @@ public class ExporterConfiguration {
         + getMaxTimeToLiveInSeconds()
         + ", deleteAfterAcknowledge="
         + isDeleteAfterAcknowledge()
+        + ", consumerJobTimeoutInSeconds="
+        + getConsumerJobTimeoutInSeconds()
+        + ", consumerIdleTimeoutInSeconds="
+        + getConsumerIdleTimeoutInSeconds()
         + ", ioThreadPoolSize="
         + getIoThreadPoolSize()
         + ", batchSize="

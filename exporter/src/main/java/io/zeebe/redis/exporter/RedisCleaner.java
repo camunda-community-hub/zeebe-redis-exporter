@@ -35,13 +35,13 @@ public class RedisCleaner {
     this.logger = logger;
     this.redisConnection = redisConnection;
     this.useProtoBuf = useProtoBuf;
-    minTtlInMillisConfig = config.getMinTimeToLiveInSeconds() * 1000l;
+    minTtlInMillisConfig = config.getMinTimeToLiveInSeconds() * 1000L;
     if (minTtlInMillisConfig < 0) minTtlInMillisConfig = 0;
-    maxTtlInMillisConfig = config.getMaxTimeToLiveInSeconds() * 1000l;
+    maxTtlInMillisConfig = config.getMaxTimeToLiveInSeconds() * 1000L;
     if (maxTtlInMillisConfig < 0) maxTtlInMillisConfig = 0;
     deleteAfterAcknowledge = config.isDeleteAfterAcknowledge();
-    consumerJobTimeout = config.getConsumerJobTimeoutInSeconds() * 1000;
-    consumerIdleTimeout = config.getConsumerIdleTimeoutInSeconds() * 1000;
+    consumerJobTimeout = config.getConsumerJobTimeoutInSeconds() * 1000L;
+    consumerIdleTimeout = config.getConsumerIdleTimeoutInSeconds() * 1000L;
     trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
   }
 
@@ -148,7 +148,7 @@ public class RedisCleaner {
               if (consumerIdleTimeout > 0) {
                 consumerGroups.forEach(
                     group -> {
-                      var consumers = group.getConsumers();
+                      var consumers = new ArrayList<>(group.getConsumers());
                       if (consumers.isEmpty()) return;
                       var youngestConsumer = consumers.remove(0);
                       consumers.stream()
