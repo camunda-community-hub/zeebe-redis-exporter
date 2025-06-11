@@ -1,9 +1,6 @@
 package io.zeebe.redis.exporter;
 
-import io.lettuce.core.RedisCommandTimeoutException;
-import io.lettuce.core.RedisConnectionException;
-import io.lettuce.core.SetArgs;
-import io.lettuce.core.XTrimArgs;
+import io.lettuce.core.*;
 import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.lettuce.core.api.sync.RedisStringCommands;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +22,8 @@ public class RedisCleaner {
   private long maxTtlInMillisConfig;
   private long minTtlInMillisConfig;
   private boolean deleteAfterAcknowledge;
+  private long consumerJobTimeout;
+  private long consumerIdleTimeout;
 
   private Duration trimScheduleDelay;
 
@@ -41,6 +40,8 @@ public class RedisCleaner {
     maxTtlInMillisConfig = config.getMaxTimeToLiveInSeconds() * 1000l;
     if (maxTtlInMillisConfig < 0) maxTtlInMillisConfig = 0;
     deleteAfterAcknowledge = config.isDeleteAfterAcknowledge();
+    consumerJobTimeout = config.getConsumerJobTimeoutInSeconds() * 1000;
+    consumerIdleTimeout = config.getConsumerIdleTimeoutInSeconds() * 1000;
     trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
   }
 
@@ -67,11 +68,53 @@ public class RedisCleaner {
         RedisStreamCommands<String, ?> streamCommands = redisConnection.syncStreamCommands();
         keys.forEach(
             stream -> {
+              // 1. always trim stream according to maxTTL
+              // side effect: prepares deleting too old pending messages in step 3
+              if (maxTtlInMillisConfig > 0) {
+                long numMaxTtlTrimmed =
+                    streamCommands.xtrim(stream, new XTrimArgs().minId(maxTTLId));
+                if (numMaxTtlTrimmed > 0) {
+                  logger.debug("{}: {} cleaned records", stream, numMaxTtlTrimmed);
+                }
+              }
+              // 2. get all consumer groups and add detailed consumer data
+              var consumerGroups =
+                  streamCommands.xinfoGroups(stream).stream()
+                      .map(o -> XInfoGroup.fromXInfo(o, useProtoBuf))
+                      .toList();
+              consumerGroups.forEach(
+                  xi ->
+                      xi.setConsumers(
+                          streamCommands.xinfoConsumers(stream, xi.getName()).stream()
+                              .map(o -> XInfoConsumer.fromXInfo(o, useProtoBuf))
+                              .sorted(Comparator.comparingLong(XInfoConsumer::getIdle))
+                              .toList()));
+              // 3. auto claim abandoned messages using the youngest consumer
+              // side effect: delete too old pending messages (according to max TTL)
+              if (consumerJobTimeout > 0) {
+                consumerGroups.stream()
+                    .filter(xi -> xi.getPending() > 0)
+                    .forEach(
+                        xi -> {
+                          var youngestConsumer = xi.getYoungestConsumer();
+                          if (youngestConsumer.isPresent()) {
+                            var consumer =
+                                Consumer.from(xi.getName(), youngestConsumer.get().getName());
+                            streamCommands.xautoclaim(
+                                stream,
+                                new XAutoClaimArgs<String>()
+                                    .consumer(consumer)
+                                    .minIdleTime(consumerJobTimeout)
+                                    .count(xi.getPending())
+                                    .justid());
+                          }
+                        });
+              }
+              // 4. trim according to last-delivered-id considering pending messages
               Optional<Long> minDelivered =
                   !deleteAfterAcknowledge
                       ? Optional.empty()
-                      : streamCommands.xinfoGroups(stream).stream()
-                          .map(o -> XInfoGroup.fromXInfo(o, useProtoBuf))
+                      : consumerGroups.stream()
                           .map(
                               xi -> {
                                 if (xi.getPending() > 0) {
@@ -86,22 +129,48 @@ public class RedisCleaner {
                               })
                           .min(Comparator.comparing(Long::longValue));
               if (minDelivered.isPresent()) {
+                var doTrim = true;
                 long minDeliveredMillis = minDelivered.get();
                 String xtrimMinId = String.valueOf(minDeliveredMillis);
                 if (maxTtlInMillisConfig > 0 && maxTTLMillis > minDeliveredMillis) {
-                  xtrimMinId = maxTTLId;
+                  doTrim = false; // xtrim with max TTL already happened
                 } else if (minTtlInMillisConfig > 0 && minTTLMillis < minDeliveredMillis) {
                   xtrimMinId = minTTLId;
                 }
-                long numTrimmed = streamCommands.xtrim(stream, new XTrimArgs().minId(xtrimMinId));
-                if (numTrimmed > 0) {
-                  logger.debug("{}: {} cleaned records", stream, numTrimmed);
+                if (doTrim) {
+                  long numTrimmed = streamCommands.xtrim(stream, new XTrimArgs().minId(xtrimMinId));
+                  if (numTrimmed > 0) {
+                    logger.debug("{}: {} cleaned records", stream, numTrimmed);
+                  }
                 }
-              } else if (maxTtlInMillisConfig > 0) {
-                long numTrimmed = streamCommands.xtrim(stream, new XTrimArgs().minId(maxTTLId));
-                if (numTrimmed > 0) {
-                  logger.debug("{}: {} cleaned records", stream, numTrimmed);
-                }
+              }
+              // 5. delete inactive consumers
+              if (consumerIdleTimeout > 0) {
+                consumerGroups.forEach(
+                    group -> {
+                      var consumers = group.getConsumers();
+                      if (consumers.isEmpty()) return;
+                      var youngestConsumer = consumers.remove(0);
+                      consumers.stream()
+                          .filter(
+                              consumer ->
+                                  consumer.getPending() == 0
+                                      && consumer.getIdle()
+                                          > youngestConsumer.getIdle() + consumerIdleTimeout)
+                          .forEach(
+                              consumer -> {
+                                long numDeleted =
+                                    streamCommands.xgroupDelconsumer(
+                                        stream, Consumer.from(group.getName(), consumer.getName()));
+                                if (numDeleted > 0) {
+                                  logger.debug(
+                                      "{}: {} deleted consumers of group {}",
+                                      stream,
+                                      numDeleted,
+                                      group.getName());
+                                }
+                              });
+                    });
               }
             });
       } catch (RedisCommandTimeoutException | RedisConnectionException ex) {

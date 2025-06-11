@@ -2,6 +2,8 @@ package io.zeebe.redis.exporter;
 
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class XInfoGroup {
 
@@ -11,6 +13,8 @@ public class XInfoGroup {
   private long lastDeliveredId;
 
   private long pending = 0;
+
+  private List<XInfoConsumer> consumers = new ArrayList<>();
 
   static {
     charset = Charset.forName("UTF-8");
@@ -65,6 +69,20 @@ public class XInfoGroup {
 
   public long getPending() {
     return pending;
+  }
+
+  public void setConsumers(List<XInfoConsumer> consumers) {
+    if (consumers == null) return;
+    this.consumers = consumers;
+  }
+
+  public List<XInfoConsumer> getConsumers() {
+    return consumers;
+  }
+
+  public Optional<XInfoConsumer> getYoungestConsumer() {
+    if (consumers.isEmpty()) return Optional.empty();
+    return Optional.of(consumers.get(0));
   }
 
   private long getMessageIdAsLong(String messageId) {

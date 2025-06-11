@@ -26,6 +26,10 @@ public class ExporterConfiguration {
 
   private boolean deleteAfterAcknowledge = false;
 
+  private long consumerJobTimeoutInSeconds = Duration.ofMinutes(5).toSeconds();
+
+  private long consumerIdleTimeoutInSeconds = Duration.ofHours(24).toSeconds();
+
   private int ioThreadPoolSize = Math.max(2, Runtime.getRuntime().availableProcessors());
 
   private int batchSize = 250;
@@ -52,6 +56,18 @@ public class ExporterConfiguration {
     return getEnv("DELETE_AFTER_ACKNOWLEDGE")
         .map(Boolean::parseBoolean)
         .orElse(deleteAfterAcknowledge);
+  }
+
+  public long getConsumerJobTimeoutInSeconds() {
+    return getEnv("CONSUMER_JOB_TIMEOUT_IN_SECONDS")
+        .map(Long::parseLong)
+        .orElse(consumerJobTimeoutInSeconds);
+  }
+
+  public long getConsumerIdleTimeoutInSeconds() {
+    return getEnv("CONSUMER_IDLE_TIMEOUT_IN_SECONDS")
+        .map(Long::parseLong)
+        .orElse(consumerIdleTimeoutInSeconds);
   }
 
   public int getIoThreadPoolSize() {

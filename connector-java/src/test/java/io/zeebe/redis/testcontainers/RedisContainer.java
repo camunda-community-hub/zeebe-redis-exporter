@@ -26,7 +26,7 @@ public class RedisContainer extends GenericContainer<RedisContainer> {
   }
 
   public String getRedisServerExternalAddress() {
-    return this.getHost() + ":" + this.getMappedPort(PORT);
+    return this.getHost() + ":" + PORT;
   }
 
   public String getRedisServerAddress() {
