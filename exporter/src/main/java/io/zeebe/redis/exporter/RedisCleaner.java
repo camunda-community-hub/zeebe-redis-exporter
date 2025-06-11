@@ -105,8 +105,7 @@ public class RedisCleaner {
                                 new XAutoClaimArgs<String>()
                                     .consumer(consumer)
                                     .minIdleTime(consumerJobTimeout)
-                                    .count(xi.getPending())
-                                    .justid());
+                                    .count(xi.getPending()));
                           }
                         });
               }
