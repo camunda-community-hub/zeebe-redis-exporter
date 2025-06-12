@@ -31,7 +31,7 @@ public class XInfoConsumer {
       } else if ("idle".equals(current)) {
         idle = getValueAt(info, i + 1, useProtoBuf);
       }
-      if (name != null && idle != null) break;
+      if (name != null && pending != null && idle != null) break;
     }
     return new XInfoConsumer(name, pending, idle);
   }

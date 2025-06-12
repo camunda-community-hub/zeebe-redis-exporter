@@ -34,7 +34,7 @@ public class XInfoGroup {
       } else if ("pending".equals(current)) {
         pending = getValueAt(info, i + 1, useProtoBuf);
       }
-      if (name != null && lastDeliveredId != null) break;
+      if (name != null && lastDeliveredId != null && pending != null) break;
     }
     return new XInfoGroup(name, lastDeliveredId, pending);
   }
@@ -82,7 +82,7 @@ public class XInfoGroup {
 
   public Optional<XInfoConsumer> getYoungestConsumer() {
     if (consumers.isEmpty()) return Optional.empty();
-    return Optional.of(consumers.get(0));
+    return Optional.of(consumers.getFirst());
   }
 
   private long getMessageIdAsLong(String messageId) {
