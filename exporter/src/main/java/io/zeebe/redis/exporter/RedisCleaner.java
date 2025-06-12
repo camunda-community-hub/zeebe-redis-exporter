@@ -82,30 +82,15 @@ public class RedisCleaner {
                   streamCommands.xinfoGroups(stream).stream()
                       .map(o -> XInfoGroup.fromXInfo(o, useProtoBuf))
                       .toList();
-              consumerGroups.forEach(
-                  xi ->
-                      xi.setConsumers(
-                          streamCommands.xinfoConsumers(stream, xi.getName()).stream()
-                              .map(o -> XInfoConsumer.fromXInfo(o, useProtoBuf))
-                              .sorted(Comparator.comparingLong(XInfoConsumer::getIdle))
-                              .toList()));
-              // 3. free too old pending messages according to max TTL
-              if (maxTtlInMillisConfig > 0) {
-                consumerGroups.stream()
-                    .filter(xi -> xi.getPending() > 0)
-                    .forEach(
-                        xi -> {
-                          var consumer = Consumer.from(xi.getName(), "zeebe-purger");
-                          streamCommands.xautoclaim(
-                              stream,
-                              new XAutoClaimArgs<String>()
-                                  .consumer(consumer)
-                                  .minIdleTime(maxTtlInMillisConfig)
-                                  .count(xi.getPending())
-                                  .justid());
-                        });
+              for (XInfoGroup consumerGroup : consumerGroups) {
+                consumerGroup.setConsumers(
+                    streamCommands.xinfoConsumers(stream, consumerGroup.getName()).stream()
+                        .map(o -> XInfoConsumer.fromXInfo(o, useProtoBuf))
+                        .sorted(Comparator.comparingLong(XInfoConsumer::getIdle))
+                        .toList());
               }
-              // 4. auto claim abandoned messages using the youngest consumer
+              // 3. transfer ownership of abandoned messages to the youngest consumer
+              // side effect: free too old pending messages according to max TTL
               if (consumerJobTimeout > 0) {
                 consumerGroups.stream()
                     .filter(xi -> xi.getPending() > 0)
@@ -120,12 +105,13 @@ public class RedisCleaner {
                                 new XAutoClaimArgs<String>()
                                     .consumer(consumer)
                                     .minIdleTime(consumerJobTimeout)
+                                    .startId("0-0")
                                     .count(xi.getPending())
                                     .justid());
                           }
                         });
               }
-              // 5. trim according to last-delivered-id considering pending messages
+              // 4. trim according to last-delivered-id considering pending messages
               Optional<Long> minDelivered =
                   !deleteAfterAcknowledge
                       ? Optional.empty()
@@ -171,9 +157,11 @@ public class RedisCleaner {
                                       && consumer.getIdle()
                                           > youngestConsumer.getIdle() + consumerIdleTimeout)
                           .forEach(
-                              consumer ->
-                                  asyncStreamCommands.xgroupDelconsumer(
-                                      stream, Consumer.from(group.getName(), consumer.getName())));
+                              consumer -> {
+                                var delConsumer =
+                                    Consumer.from(group.getName(), consumer.getName());
+                                asyncStreamCommands.xgroupDelconsumer(stream, delConsumer);
+                              });
                     });
               }
             });
