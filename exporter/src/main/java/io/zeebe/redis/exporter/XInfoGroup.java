@@ -82,7 +82,7 @@ public class XInfoGroup {
 
   public Optional<XInfoConsumer> getYoungestConsumer() {
     if (consumers.isEmpty()) return Optional.empty();
-    return Optional.of(consumers.getFirst());
+    return Optional.of(consumers.get(0));
   }
 
   private long getMessageIdAsLong(String messageId) {
