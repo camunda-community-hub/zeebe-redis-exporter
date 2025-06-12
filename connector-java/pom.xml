@@ -8,7 +8,7 @@
 	<parent>
 		<groupId>io.zeebe.redis</groupId>
 		<artifactId>root</artifactId>
-		<version>1.0.9-rc4</version>
+		<version>1.0.9-rc5-SNAPSHOT</version>
 	</parent>
 
 	<dependencies>
