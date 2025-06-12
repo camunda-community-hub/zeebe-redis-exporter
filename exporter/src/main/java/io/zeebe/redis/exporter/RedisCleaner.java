@@ -7,7 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 
 public class RedisCleaner {
@@ -28,6 +27,10 @@ public class RedisCleaner {
 
   private Duration trimScheduleDelay;
 
+  private String streamPrefix;
+  private long keyScanCycle;
+  private long lastKeyScan = -1;
+
   public RedisCleaner(
       UniversalRedisConnection<String, ?> redisConnection,
       boolean useProtoBuf,
@@ -44,6 +47,8 @@ public class RedisCleaner {
     consumerJobTimeout = config.getConsumerJobTimeoutInSeconds() * 1000L;
     consumerIdleTimeout = config.getConsumerIdleTimeoutInSeconds() * 1000L;
     trimScheduleDelay = Duration.ofSeconds(config.getCleanupCycleInSeconds());
+    streamPrefix = config.getStreamPrefix();
+    keyScanCycle = config.getKeyScanCycleInSeconds() * 1000L;
   }
 
   public void setRedisConnection(UniversalRedisConnection<String, ?> redisConnection) {
@@ -55,13 +60,30 @@ public class RedisCleaner {
   }
 
   public void trimStreamValues() {
+    long now = System.currentTimeMillis();
+    // scan existing zeebe streams and add them to the list of streams to be considered
+    if (redisConnection != null && (now - lastKeyScan) > keyScanCycle) {
+      try {
+        var currentStreams =
+            redisConnection.syncClusterCommands().keys(streamPrefix + "*").stream()
+                .filter(s -> !(CLEANUP_LOCK.equals(s) || CLEANUP_TIMESTAMP.equals(s)))
+                .toList();
+        // refresh stream information
+        streams.clear();
+        currentStreams.forEach(this::considerStream);
+        lastKeyScan = now;
+      } catch (Exception e) {
+        logger.error("Error scanning for streams like " + streamPrefix + "*", e);
+      }
+    }
+    // do the cleanup job
     if (redisConnection != null && streams.size() > 0 && acquireCleanupLock()) {
       try {
         // get ID according to max time to live
-        final long maxTTLMillis = System.currentTimeMillis() - maxTtlInMillisConfig;
+        final long maxTTLMillis = now - maxTtlInMillisConfig;
         final String maxTTLId = String.valueOf(maxTTLMillis);
         // get ID according to min time to live
-        final long minTTLMillis = System.currentTimeMillis() - minTtlInMillisConfig;
+        final long minTTLMillis = now - minTtlInMillisConfig;
         final String minTTLId = String.valueOf(minTTLMillis);
         logger.debug("trim streams {}", streams);
         // trim all streams

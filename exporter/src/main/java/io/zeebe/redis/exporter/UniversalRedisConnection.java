@@ -7,6 +7,7 @@ import io.lettuce.core.api.async.RedisStreamAsyncCommands;
 import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.lettuce.core.api.sync.RedisStringCommands;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
+import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 
 public class UniversalRedisConnection<K, V> {
 
@@ -35,6 +36,11 @@ public class UniversalRedisConnection<K, V> {
   }
 
   public RedisStringCommands<K, V> syncStringCommands() {
+    if (redisConnection != null) return redisConnection.sync();
+    return redisClusterConnection.sync();
+  }
+
+  public RedisClusterCommands<K, V> syncClusterCommands() {
     if (redisConnection != null) return redisConnection.sync();
     return redisClusterConnection.sync();
   }

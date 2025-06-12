@@ -30,6 +30,8 @@ public class ExporterConfiguration {
 
   private long consumerIdleTimeoutInSeconds = Duration.ofHours(24).toSeconds();
 
+  private long keyScanCycleInSeconds = Duration.ofMinutes(15).toSeconds();
+
   private int ioThreadPoolSize = Math.max(2, Runtime.getRuntime().availableProcessors());
 
   private int batchSize = 250;
@@ -68,6 +70,10 @@ public class ExporterConfiguration {
     return getEnv("CONSUMER_IDLE_TIMEOUT_IN_SECONDS")
         .map(Long::parseLong)
         .orElse(consumerIdleTimeoutInSeconds);
+  }
+
+  public long getKeyScanCycleInSeconds() {
+    return getEnv("KEY_SCAN_CYCLE_IN_SECONDS").map(Long::parseLong).orElse(keyScanCycleInSeconds);
   }
 
   public int getIoThreadPoolSize() {
