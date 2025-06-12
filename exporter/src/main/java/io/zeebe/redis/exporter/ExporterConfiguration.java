@@ -98,6 +98,10 @@ public class ExporterConfiguration {
     return getEnv("NAME").orElse(name);
   }
 
+  public String getStreamPrefix() {
+    return getName() + ":";
+  }
+
   public Optional<RedisURI> getRemoteAddress() {
     return getEnv("REMOTE_ADDRESS")
         .or(() -> Optional.ofNullable(remoteAddress))

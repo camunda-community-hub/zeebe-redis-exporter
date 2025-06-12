@@ -55,6 +55,11 @@ public class ZeebeTestContainer extends ZeebeContainer {
     return this;
   }
 
+  public ZeebeTestContainer andUseConsumerJobTimeoutInSeconds(long jobTimeoutInSeconds) {
+    withEnv("ZEEBE_REDIS_CONSUMER_JOB_TIMEOUT_IN_SECONDS", Long.toString(jobTimeoutInSeconds));
+    return this;
+  }
+
   public ZeebeClient getClient() {
     if (zeebeClient == null) {
       zeebeClient =

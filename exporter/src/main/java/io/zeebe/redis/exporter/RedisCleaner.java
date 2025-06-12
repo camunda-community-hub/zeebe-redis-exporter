@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 
 public class RedisCleaner {
@@ -89,25 +90,36 @@ public class RedisCleaner {
                         .sorted(Comparator.comparingLong(XInfoConsumer::getIdle))
                         .toList());
               }
-              // 3. transfer ownership of abandoned messages to the youngest consumer
+              // 3. resend abandoned messages
               // side effect: free too old pending messages according to max TTL
               if (consumerJobTimeout > 0) {
                 consumerGroups.stream()
                     .filter(xi -> xi.getPending() > 0)
                     .forEach(
                         xi -> {
-                          var youngestConsumer = xi.getYoungestConsumer();
-                          if (youngestConsumer.isPresent()) {
-                            var consumer =
-                                Consumer.from(xi.getName(), youngestConsumer.get().getName());
-                            streamCommands.xautoclaim(
-                                stream,
-                                new XAutoClaimArgs<String>()
-                                    .consumer(consumer)
-                                    .minIdleTime(consumerJobTimeout)
-                                    .startId("0-0")
-                                    .count(xi.getPending())
-                                    .justid());
+                          var consumerPending = Consumer.from(xi.getName(), "zeebe-pending");
+                          var result =
+                              streamCommands.xautoclaim(
+                                  stream,
+                                  new XAutoClaimArgs<String>()
+                                      .consumer(consumerPending)
+                                      .minIdleTime(consumerJobTimeout)
+                                      .startId("0-0")
+                                      .count(xi.getPending()));
+                          var numResent = 0;
+                          for (var message : result.getMessages()) {
+                            var body = message.getBody();
+                            var k = body.keySet().iterator().next();
+                            if (Long.parseLong(k) >= maxTTLMillis) {
+                              streamCommands.xadd(stream, k, body.get(k));
+                              streamCommands.xdel(stream, message.getId());
+                              numResent++;
+                            }
+                          }
+                          streamCommands.xgroupDelconsumer(stream, consumerPending);
+                          if (numResent > 0) {
+                            logger.warn(
+                                "Resent {} timed out pending messages for {}", numResent, stream);
                           }
                         });
               }
