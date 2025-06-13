@@ -39,7 +39,7 @@ Add the Maven dependency to your `pom.xml`
 <dependency>
 	<groupId>io.zeebe.redis</groupId>
 	<artifactId>zeebe-redis-connector</artifactId>
-	<version>1.0.3</version>
+	<version>1.1.0</version>
 </dependency>
 ```
 
@@ -110,7 +110,6 @@ Of course it is possible to combine this simple client side mechanism with the e
 Hence the choice is yours.
 
 #### Tuning connector performance
-*Since 0.9.6*
 
 Reading Redis streams is carried out by using the `XREAD COUNT count BLOCK milliseconds ...` command. In order to tune
 connector performance you are able to set the count (maximum number of messages read at once, default is 500) and block milliseconds (maximum blocking time, default is 2000) parameter:
