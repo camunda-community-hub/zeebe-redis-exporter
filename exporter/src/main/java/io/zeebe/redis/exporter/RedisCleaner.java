@@ -273,7 +273,8 @@ public class RedisCleaner {
   private List<String> getZeebeStreams() {
     Set<String> zeebeStreams = new HashSet<>();
     String cursor = "0";
-    ScanArgs scanArgs = ScanArgs.Builder.matches(streamPrefix + "*").limit(ValueType.values().length + 5);
+    ScanArgs scanArgs =
+        ScanArgs.Builder.matches(streamPrefix + "*").limit(ValueType.values().length + 5);
     var redisClusterCommands = redisConnection.syncClusterCommands();
     do {
       var result = redisClusterCommands.scan(ScanCursor.of(cursor), scanArgs);
