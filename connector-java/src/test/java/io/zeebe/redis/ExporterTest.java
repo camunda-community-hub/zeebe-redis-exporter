@@ -150,16 +150,16 @@ public class ExporterTest {
     final List<Schema.DeploymentRecord> records2 = new ArrayList<>();
 
     zeebeRedis1 =
-            ZeebeRedis.newBuilder(redisClient)
-                    .consumerGroup("ExporterTest")
-                    .addDeploymentListener(records1::add)
-                    .build();
+        ZeebeRedis.newBuilder(redisClient)
+            .consumerGroup("ExporterTest")
+            .addDeploymentListener(records1::add)
+            .build();
     zeebeRedis2 =
-            ZeebeRedis.newBuilder(redisClient)
-                    .consumerGroup("ExporterTest")
-                    .consumerId("consumer-2")
-                    .addDeploymentListener(records2::add)
-                    .build();
+        ZeebeRedis.newBuilder(redisClient)
+            .consumerGroup("ExporterTest")
+            .consumerId("consumer-2")
+            .addDeploymentListener(records2::add)
+            .build();
 
     // create some events
     client.newDeployResourceCommand().addProcessModel(PROCESS, "process1.bpmn").send().join();
@@ -169,15 +169,15 @@ public class ExporterTest {
 
     // and consume them
     Awaitility.await("await until all deployments are created")
-            .untilAsserted(
-                    () -> {
-                      var allRecords = new ArrayList<>(records1);
-                      allRecords.addAll(records2);
-                      assertThat(allRecords)
-                              .extracting(r -> r.getMetadata().getIntent())
-                              .filteredOn(i -> i.equals(DeploymentIntent.CREATED.name()))
-                              .hasSize(4);
-                    });
+        .untilAsserted(
+            () -> {
+              var allRecords = new ArrayList<>(records1);
+              allRecords.addAll(records2);
+              assertThat(allRecords)
+                  .extracting(r -> r.getMetadata().getIntent())
+                  .filteredOn(i -> i.equals(DeploymentIntent.CREATED.name()))
+                  .hasSize(4);
+            });
 
     // assert that 2 consumers are registered
     RedisStreamCommands<String, String> streamCommands = redisClient.connect().sync();
@@ -186,9 +186,11 @@ public class ExporterTest {
 
     // when
     zeebeRedis1.close();
+    zeebeRedis2.close();
 
     // then
-    // assert that only the second consumer is left and the first has been deleted
+    // assert that only the second consumer is left and the first (where the ID is auto generated)
+    // has been deleted
     consumers = streamCommands.xinfoConsumers("zeebe:DEPLOYMENT", "ExporterTest");
     assertThat(consumers).hasSize(1);
     assertThat(consumers).allMatch(c -> c.toString().contains("consumer-2"));
