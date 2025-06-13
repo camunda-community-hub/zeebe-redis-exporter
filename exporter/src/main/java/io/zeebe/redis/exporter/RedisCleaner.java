@@ -62,7 +62,8 @@ public class RedisCleaner {
   public void trimStreamValues() {
     long now = System.currentTimeMillis();
     // scan existing zeebe streams and add them to the list of streams to be considered
-    if (redisConnection != null && (now - lastKeyScan) > keyScanCycle) {
+    if (redisConnection != null && keyScanCycle > 0 && (now - lastKeyScan) > keyScanCycle) {
+      lastKeyScan = now;
       try {
         var currentStreams =
             redisConnection.syncClusterCommands().keys(streamPrefix + "*").stream()
@@ -71,7 +72,6 @@ public class RedisCleaner {
         // refresh stream information
         streams.clear();
         currentStreams.forEach(this::considerStream);
-        lastKeyScan = now;
       } catch (Exception e) {
         logger.error("Error scanning for streams like " + streamPrefix + "*", e);
       }
