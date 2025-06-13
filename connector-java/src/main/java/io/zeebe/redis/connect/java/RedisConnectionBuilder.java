@@ -31,6 +31,8 @@ public class RedisConnectionBuilder {
   private boolean shouldDestroyConsumerGroupOnClose = true;
 
   private String consumerId = UUID.randomUUID().toString();
+  private boolean shouldDeleteConsumerIdOnClose = true;
+
   private String prefix = "zeebe:";
 
   private String offset = "0-0";
@@ -86,6 +88,7 @@ public class RedisConnectionBuilder {
   /** Set the unique consumer ID. */
   public RedisConnectionBuilder consumerId(String consumerId) {
     this.consumerId = consumerId;
+    this.shouldDeleteConsumerIdOnClose = false;
     return this;
   }
 
@@ -277,7 +280,8 @@ public class RedisConnectionBuilder {
             offsets.toArray(new XReadArgs.StreamOffset[0]),
             listeners,
             deleteMessages,
-            shouldDestroyConsumerGroupOnClose);
+            shouldDestroyConsumerGroupOnClose,
+            shouldDeleteConsumerIdOnClose);
     zeebeRedis.start();
 
     return zeebeRedis;

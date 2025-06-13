@@ -101,6 +101,7 @@ public class ZeebeRedis implements AutoCloseable {
   private volatile boolean forcedClose = false;
 
   private boolean shouldDestroyConsumerGroupOnClose;
+  private boolean shouldDeleteConsumerIdOnClose;
 
   protected ZeebeRedis(
       UniversalRedisClient redisClient,
@@ -115,7 +116,8 @@ public class ZeebeRedis implements AutoCloseable {
       XReadArgs.StreamOffset<String>[] offsets,
       Map<String, List<Consumer<?>>> listeners,
       boolean deleteMessages,
-      boolean shouldDestroyConsumerGroupOnClose) {
+      boolean shouldDestroyConsumerGroupOnClose,
+      boolean shouldDeleteConsumerIdOnClose) {
     this.redisClient = redisClient;
     this.redisConnection = redisConnection;
     this.reconnectUsesNewConnection = reconnectUsesNewConnection;
@@ -133,6 +135,7 @@ public class ZeebeRedis implements AutoCloseable {
       LOGGER.warn(
           "No Redis consumer group configured! Will use unique disposable group {}", consumerGroup);
     }
+    this.shouldDeleteConsumerIdOnClose = shouldDeleteConsumerIdOnClose;
   }
 
   /** Returns a new builder to read from the Redis Streams. */
@@ -246,6 +249,28 @@ public class ZeebeRedis implements AutoCloseable {
                 } catch (Exception ex) {
                   LOGGER.error(
                       "Error destroying consumer group {} of stream {}", consumerGroup, stream);
+                }
+              });
+    } else if (shouldDeleteConsumerIdOnClose) {
+      var syncStreamCommands = redisConnection.syncStreamCommands();
+      Arrays.stream(offsets)
+          .forEach(
+              o -> {
+                String stream = String.valueOf(o.getName());
+                LOGGER.trace(
+                    "Deleting consumer {} of consumer group {} for stream {}",
+                    consumerId,
+                    consumerGroup,
+                    stream);
+                try {
+                  syncStreamCommands.xgroupDelconsumer(
+                      stream, io.lettuce.core.Consumer.from(consumerGroup, consumerId));
+                } catch (Exception ex) {
+                  LOGGER.error(
+                      "Error deleting consumer {} of consumer group {} for stream {}",
+                      consumerId,
+                      consumerGroup,
+                      stream);
                 }
               });
     }

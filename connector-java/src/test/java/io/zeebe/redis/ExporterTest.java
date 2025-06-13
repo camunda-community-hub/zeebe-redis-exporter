@@ -8,6 +8,7 @@ import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
 import io.camunda.zeebe.protocol.record.intent.DeploymentIntent;
 import io.camunda.zeebe.protocol.record.value.BpmnElementType;
 import io.lettuce.core.RedisClient;
+import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.zeebe.exporter.proto.Schema;
 import io.zeebe.redis.connect.java.ZeebeRedis;
 import io.zeebe.redis.testcontainers.ZeebeTestContainer;
@@ -140,6 +141,57 @@ public class ExporterTest {
     assertThat(records1.size()).isGreaterThan(0);
     assertThat(records2.size()).isGreaterThan(0);
     assertThat(records1).doesNotContainAnyElementsOf(records2);
+  }
+
+  @Test
+  public void shouldDeleteConsumerIdIfNotSetExplicitly() {
+    // given
+    final List<Schema.DeploymentRecord> records1 = new ArrayList<>();
+    final List<Schema.DeploymentRecord> records2 = new ArrayList<>();
+
+    zeebeRedis1 =
+            ZeebeRedis.newBuilder(redisClient)
+                    .consumerGroup("ExporterTest")
+                    .addDeploymentListener(records1::add)
+                    .build();
+    zeebeRedis2 =
+            ZeebeRedis.newBuilder(redisClient)
+                    .consumerGroup("ExporterTest")
+                    .consumerId("consumer-2")
+                    .addDeploymentListener(records2::add)
+                    .build();
+
+    // create some events
+    client.newDeployResourceCommand().addProcessModel(PROCESS, "process1.bpmn").send().join();
+    client.newDeployResourceCommand().addProcessModel(PROCESS, "process2.bpmn").send().join();
+    client.newDeployResourceCommand().addProcessModel(PROCESS, "process3.bpmn").send().join();
+    client.newDeployResourceCommand().addProcessModel(PROCESS, "process4.bpmn").send().join();
+
+    // and consume them
+    Awaitility.await("await until all deployments are created")
+            .untilAsserted(
+                    () -> {
+                      var allRecords = new ArrayList<>(records1);
+                      allRecords.addAll(records2);
+                      assertThat(allRecords)
+                              .extracting(r -> r.getMetadata().getIntent())
+                              .filteredOn(i -> i.equals(DeploymentIntent.CREATED.name()))
+                              .hasSize(4);
+                    });
+
+    // assert that 2 consumers are registered
+    RedisStreamCommands<String, String> streamCommands = redisClient.connect().sync();
+    var consumers = streamCommands.xinfoConsumers("zeebe:DEPLOYMENT", "ExporterTest");
+    assertThat(consumers).hasSize(2);
+
+    // when
+    zeebeRedis1.close();
+
+    // then
+    // assert that only the second consumer is left and the first has been deleted
+    consumers = streamCommands.xinfoConsumers("zeebe:DEPLOYMENT", "ExporterTest");
+    assertThat(consumers).hasSize(1);
+    assertThat(consumers).allMatch(c -> c.toString().contains("consumer-2"));
   }
 
   @Test
