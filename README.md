@@ -316,7 +316,7 @@ The cleanup mechanism consists of the following options:
 | `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS`      | The maximum time to live. Default is `300` (5 minutes). A value of zero or below will prevent cleanup with max TTL.                                                                                    |
 | `ZEEBE_REDIS_DELETE_AFTER_ACKNOWLEDGE`         | Whether to automatically delete acknowledged messages. Default value is `false` (disabled). Set to `true` in order to enable the feature.                                                              |
 | `ZEEBE_REDIS_CONSUMER_JOB_TIMEOUT_IN_SECONDS`  | Job timeout for consumers. Pending (not acknowledged) messages will be resent to the stream after the timeout. Default is `300` (5 minutes). A value of zero or below will prevent resending messages. |
-| `ZEEBE_REDIS_CONSUMER_IDLE_TIMEOUT_IN_SECONDS` | Idle timeout for consumers. Consumers being inactive for too long time will be deleted. Default is `86400` (24 hours). A value of zero or below will prevent cleaning up inactive consumers.           |
+| `ZEEBE_REDIS_CONSUMER_IDLE_TIMEOUT_IN_SECONDS` | Idle timeout for consumers. Consumers being inactive for a too long time will be deleted. Default is `86400` (24 hours). A value of zero or below will prevent cleaning up inactive consumers.         |
 | `ZEEBE_REDIS_KEY_SCAN_CYCLE_IN_SECONDS`        | Scan cycle for new Zeebe streams (created by other instances) to be considered during cleanup. Default is `900` (15 minutes). A value of zero or below will prevent scanning for new streams.          |
 
 
