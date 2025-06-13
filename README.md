@@ -142,7 +142,7 @@ See [connector-csharp/README.md](https://github.com/camunda-community-hub/zeebe-
 A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
-docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.6.12-1.0.3
+docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.7.5-1.1.0
 ```
 
 For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter.
@@ -158,12 +158,12 @@ docker-compose up -d
 1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) _(camunda-zeebe-%{VERSION}.tar.gz
    )_
 
-1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-1.0.3-jar-with-dependencies.jar_)
+1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-1.1.0-jar-with-dependencies.jar_)
 
 1. Copy the exporter JAR  into the broker folder `~/zeebe-broker-%{VERSION}/exporters`.
 
     ```
-    cp exporter/target/zeebe-redis-exporter-1.0.3-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
+    cp exporter/target/zeebe-redis-exporter-1.1.0-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
     ```
 
 1. Add the exporter to the broker configuration `~/zeebe-broker-%{VERSION}/config/application.yaml`:
@@ -174,7 +174,7 @@ docker-compose up -d
         exporters:
           redis:
             className: io.zeebe.redis.exporter.RedisExporter
-            jarPath: exporters/zeebe-redis-exporter-1.0.3-jar-with-dependencies.jar
+            jarPath: exporters/zeebe-redis-exporter-1.1.0-jar-with-dependencies.jar
     ```
 
 1. Set the environment variable `ZEEBE_REDIS_REMOTE_ADDRESS` to your Redis URL.
@@ -235,6 +235,15 @@ zeebe:
           # Redis stream automatic cleanup of acknowledged messages. Default is false.   
           deleteAfterAcknowledge: false
 
+          # Job timeout for Redis consumers. Default is 5 minutes. Set to 0 or -1 in order to prevent resending pending messages.
+          consumerJobTimeoutInSeconds: 300
+
+          # Idle timeout for Redis consumers. Default is 24 hours. Set to 0 or -1 in order to prevent cleaning up inactive consumers.
+          consumerIdleTimeoutInSeconds: 86400
+
+          # Redis stream keys scan cycle. Default is 15 minutes. Set to 0 or -1 in order to prevent scanning for new streams to be considered in cleanup.
+          keyScanCycleInSeconds: 900
+
           # Redis Client IO-Thread-Pool-Size. Default is number of available processors but not smaller than 2.
           ioThreadPoolSize: 2
 
@@ -267,14 +276,14 @@ networks:
 services:
   zeebe:
     container_name: zeebe_broker
-    image: camunda/zeebe:8.6.12
+    image: camunda/zeebe:8.7.5
     environment:
       - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
     ports:
       - "26500:26500"
       - "9600:9600"
     volumes:
-      - ../exporter/target/zeebe-redis-exporter-1.0.3-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
+      - ../exporter/target/zeebe-redis-exporter-1.1.0-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
       - ./application.yaml:/usr/local/zeebe/config/application.yaml
     networks:
       - zeebe_network
@@ -300,12 +309,16 @@ Check out the Redis documentation on how to [manage](https://redis.io/docs/manag
 
 The cleanup mechanism consists of the following options:
 
-| **Parameter**                              | **Description**                                                                                                                                     |
-|--------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| `ZEEBE_REDIS_CLEANUP_CYCLE_IN_SECONDS`     | General cleanup cycle. Default is `60` (1 minute). A value of zero or below will completely disable any cleanup.                                    |
-| `ZEEBE_REDIS_MIN_TIME_TO_LIVE_IN_SECONDS`  | The minimum time to live. Default is `0` (disabled). Set a value greater than zero in order to keep acknowledged messages alive for a minimum time. |
-| `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS`  | The maximum time to live. Default is `300` (5 minutes). A value of zero or below will prevent cleanup with max TTL.                                 |
-| `ZEEBE_REDIS_DELETE_AFTER_ACKNOWLEDGE`     | Whether to automatically delete acknowledged messages. Default value is `false` (disabled). Set to `true` in order to enable the feature.           |
+| **Parameter**                                  | **Description**                                                                                                                                                                                        |
+|------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ZEEBE_REDIS_CLEANUP_CYCLE_IN_SECONDS`         | General cleanup cycle. Default is `60` (1 minute). A value of zero or below will completely disable any cleanup.                                                                                       |
+| `ZEEBE_REDIS_MIN_TIME_TO_LIVE_IN_SECONDS`      | The minimum time to live. Default is `0` (disabled). Set a value greater than zero in order to keep acknowledged messages alive for a minimum time.                                                    |
+| `ZEEBE_REDIS_MAX_TIME_TO_LIVE_IN_SECONDS`      | The maximum time to live. Default is `300` (5 minutes). A value of zero or below will prevent cleanup with max TTL.                                                                                    |
+| `ZEEBE_REDIS_DELETE_AFTER_ACKNOWLEDGE`         | Whether to automatically delete acknowledged messages. Default value is `false` (disabled). Set to `true` in order to enable the feature.                                                              |
+| `ZEEBE_REDIS_CONSUMER_JOB_TIMEOUT_IN_SECONDS`  | Job timeout for consumers. Pending (not acknowledged) messages will be resent to the stream after the timeout. Default is `300` (5 minutes). A value of zero or below will prevent resending messages. |
+| `ZEEBE_REDIS_CONSUMER_IDLE_TIMEOUT_IN_SECONDS` | Idle timeout for consumers. Consumers being inactive for too long time will be deleted. Default is `86400` (24 hours). A value of zero or below will prevent cleaning up inactive consumers.           |
+| `ZEEBE_REDIS_KEY_SCAN_CYCLE_IN_SECONDS`        | Scan cycle for new Zeebe streams (created by other instances) to be considered during cleanup. Default is `900` (15 minutes). A value of zero or below will prevent scanning for new streams.          |
+
 
 The maximum TTL configuration is a safety net to cleanup all messages after a certain timespan. This can be used alone or in combination with the "delete-after-acknowledge" feature.
 If combined not acknowledged messages will be deleted anyway after max TTL. In case you want to keep messages alive for a certain timespan despite they have already been acknowledged
@@ -315,11 +328,23 @@ The "delete-after-acknowledge" feature is based on the Redis `xinfogroups` comma
 If there are pending messages the algorithm will additionally consider the lowest ID of the Redis `xpending` command result in order to delete only acknowledged messages.
 Please be aware that messages must have been acknowledged by all known consumer groups in order to be cleaned up.
 
+This works extremely well - as long as consumers do not crash and always acknowledge their messages properly. In order to recognize pending messages that are no longer being processed, you have the "consumer-job-timeout" at your disposal.
+In case a message has been read but not acknowledged for a timer greater than the "consumer-job-timeout" it will be claimed
+using the `xautoclaim` command and resent to the stream. Messages older than max TTL will be deleted anyway.
+
+Furthermore, each consumer group has a list of its consumers. If you have a crashing consumer it will remain in this list forever.
+In order to cleanup supposedly inactive consumers the cleanup algorithm will look for the youngest consumer and it's idle time.
+Any consumer having a longer idle time than the youngest consumer plus the configured consumer idle timeout will be removed.
+
 Cleanup is synchronized between different Zeebe nodes so that the cleanup does not run multiple times on each node but only once.
 
-#### Tuning exporter performance
+Hence, the cleanup algorithm can run on any of the Zeebe nodes. The streams to be taken into account during the cleanup are, of course,
+all streams to which data is exported from this node. But this, of course, might not be enough. In order to have a list of actual streams 
+(represented as keys in Redis) the cleanup algorithm scans regularly for new streams created by other Zeebe nodes or even created before
+the startup of the current Zeebe node. With that the cleanup will automatically take into account all Zeebe streams available in Redis 
+and ensure optimal garbage collection.
 
-*Since 0.9.8*
+#### Tuning exporter performance
 
 In order to tune the exporter performance you have the following options available:
 
@@ -333,7 +358,6 @@ The exporter queues records and sends them every `ZEEBE_REDIS_BATCH_CYCLE_MILLIS
 commands in a batch using `ZEEBE_REDIS_BATCH_SIZE` as maximum thus increasing the throughput. According to the Lettuce documentation batches are recommended to have a size between 50 and 1000.
 
 ### Using Redis clusters
-*Since 0.9.10*
 
 When connecting to Redis clusters the underlying Lettuce client must use the `RedisClusterClient` which differs from the standard `RedisClient`.
 In order to activate the cluster client usage of the exporter set `ZEEBE_REDIS_USE_CLUSTER_CLIENT=true` in your environment.
@@ -366,7 +390,6 @@ In the case of Redis clusters each stream (which corresponds to a Zeebe `ValueTy
 The connector - if initialized correctly with the `RedisClusterClient` - then uses multiple connections to read from each stream individually based on the asynchronous connection pool support of Lettuce.
 
 ### Obtaining Metrics
-*Since 1.0.4*
 
 The Redis Exporter provides metrics via Spring Boot Actuator similar to the OpenSearch Exporter:
 
