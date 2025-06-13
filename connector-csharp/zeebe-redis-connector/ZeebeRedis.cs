@@ -17,6 +17,7 @@ namespace Io.Zeebe.Redis.Connect.Csharp
         private CancellationTokenSource? _cancellationTokenSource = null;
         private readonly ConnectionMultiplexer _redisConnection;
         private readonly string _consumerGroup;
+        private string _consumerId;
         private readonly bool _deleteConsumerGroupOnDispose = false;
         private readonly IDatabase _database;
         private readonly List<StreamPosition> _streamPositions = new List<StreamPosition>();
@@ -256,7 +257,7 @@ namespace Io.Zeebe.Redis.Connect.Csharp
 
             _logger?.LogInformation("Start consuming Zeebe events from {0} [consumerGroup={1}]", _redisConnection.GetEndPoints(), _consumerGroup);
             var cancellationToken = _cancellationTokenSource.Token;
-            string consumerId = Guid.NewGuid().ToString();
+            _consumerId = Guid.NewGuid().ToString();
 
             // create consumer groups
             foreach (var item in _streamPositions)
@@ -275,7 +276,7 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    var streamResults = await _database.StreamReadGroupAsync(streams, _consumerGroup, consumerId, 500);
+                    var streamResults = await _database.StreamReadGroupAsync(streams, _consumerGroup, _consumerId, 500);
                     Parallel.ForEach(streamResults, result =>
                     {
                         if (result.Entries.Length != 0)
@@ -311,12 +312,21 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             await Task.Delay(TimeSpan.FromMilliseconds(_pollIntervalMillis*2)).ContinueWith(t =>
             {
                 _logger?.LogInformation("Stopping ZeebeRedis");
+                // delete consumer group
                 if (_deleteConsumerGroupOnDispose)
                 {
                     _logger?.LogDebug("Delete disposable one-time consumer group {0}", _consumerGroup);
                     foreach (var item in _streamPositions)
                     {
                         _database.StreamDeleteConsumerGroup(item.Key, _consumerGroup);
+                    }
+                }
+                else
+                {
+                    _logger?.LogDebug("Delete consumer id {0}", _consumerId);
+                    foreach (var item in _streamPositions)
+                    {
+                        _database.StreamDeleteConsumer(item.Key, _consumerGroup, _consumerId);
                     }
                 }
                 _redisConnection.ConnectionFailed -= RedisConnection_ConnectionFailed;

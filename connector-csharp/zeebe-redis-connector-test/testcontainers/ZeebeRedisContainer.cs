@@ -1,4 +1,5 @@
 ﻿using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Networks;
 using System;
@@ -20,7 +21,7 @@ namespace zeeb_redis_connector_test.testcontainers
 
         public ZeebeRedisContainer() {
             // shared network
-            _network = new NetworkBuilder().WithName("shared").Build();
+            _network = new NetworkBuilder().WithName("redis-test").Build();
 
             // Setup Redis
             _redisContainer = new ContainerBuilder()
@@ -42,7 +43,6 @@ namespace zeeb_redis_connector_test.testcontainers
                 .WithEnvironment("ZEEBE_REDIS_REMOTE_ADDRESS", "redis://redis")
                 .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(26500))
                 .WithCleanUp(true)
-                .DependsOn(_redisContainer)
                 .Build();
         }
 
@@ -62,9 +62,11 @@ namespace zeeb_redis_connector_test.testcontainers
 
         public async Task<IZeebeClient> CreateClientAsync()
         {
+            _ = Wait.ForUnixContainer().UntilPortIsAvailable(_zeebeContainer.GetMappedPublicPort(26500));
+
             // create zeebe client
             var zeebeClient = ZeebeClient.Builder()
-                .UseGatewayAddress("127.0.0.1:26500")
+                .UseGatewayAddress("127.0.0.1:" + _zeebeContainer.GetMappedPublicPort(26500))
                 .UsePlainText()
                 .Build();
 
