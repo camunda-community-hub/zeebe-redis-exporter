@@ -115,7 +115,7 @@ public class TransferAnbandonedMessagesTest {
             .sync()
             .xreadgroup(
                 Consumer.from("application_42", "consumer_2"),
-                XReadArgs.Builder.block(2000),
+                XReadArgs.Builder.block(3000),
                 XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
     assertThat(messages.size()).isGreaterThan(0);
     var messageKeys = new ArrayList<String>();

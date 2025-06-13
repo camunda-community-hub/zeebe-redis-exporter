@@ -65,13 +65,7 @@ public class RedisCleaner {
     if (redisConnection != null && keyScanCycle > 0 && (now - lastKeyScan) > keyScanCycle) {
       lastKeyScan = now;
       try {
-        var currentStreams =
-            redisConnection.syncClusterCommands().keys(streamPrefix + "*").stream()
-                .filter(s -> !(CLEANUP_LOCK.equals(s) || CLEANUP_TIMESTAMP.equals(s)))
-                .toList();
-        // refresh stream information
-        streams.clear();
-        currentStreams.forEach(this::considerStream);
+        getZeebeStreams().forEach(this::considerStream);
       } catch (Exception e) {
         logger.error("Error scanning for streams like " + streamPrefix + "*", e);
       }
@@ -273,5 +267,20 @@ public class RedisCleaner {
     } catch (Exception ex) {
       logger.error("Error releasing cleanup lock", ex);
     }
+  }
+
+  private List<String> getZeebeStreams() {
+    Set<String> zeebeStreams = new HashSet<>();
+    String cursor = "0";
+    ScanArgs scanArgs = ScanArgs.Builder.matches(streamPrefix + "*").limit(100);
+    var redisClusterCommands = redisConnection.syncClusterCommands();
+    do {
+      var result = redisClusterCommands.scan(ScanCursor.of(cursor), scanArgs);
+      cursor = result.getCursor();
+      zeebeStreams.addAll(result.getKeys());
+    } while (!"0".equals(cursor));
+    return zeebeStreams.stream()
+        .filter(s -> !(CLEANUP_LOCK.equals(s) || CLEANUP_TIMESTAMP.equals(s)))
+        .toList();
   }
 }
