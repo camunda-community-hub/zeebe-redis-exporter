@@ -1,5 +1,6 @@
 package io.zeebe.redis.exporter;
 
+import io.camunda.zeebe.protocol.record.ValueType;
 import io.lettuce.core.*;
 import io.lettuce.core.api.sync.RedisStreamCommands;
 import io.lettuce.core.api.sync.RedisStringCommands;
@@ -272,7 +273,7 @@ public class RedisCleaner {
   private List<String> getZeebeStreams() {
     Set<String> zeebeStreams = new HashSet<>();
     String cursor = "0";
-    ScanArgs scanArgs = ScanArgs.Builder.matches(streamPrefix + "*").limit(100);
+    ScanArgs scanArgs = ScanArgs.Builder.matches(streamPrefix + "*").limit(ValueType.values().length + 5);
     var redisClusterCommands = redisConnection.syncClusterCommands();
     do {
       var result = redisClusterCommands.scan(ScanCursor.of(cursor), scanArgs);
