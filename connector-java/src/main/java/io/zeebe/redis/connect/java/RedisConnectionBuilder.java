@@ -236,6 +236,51 @@ public class RedisConnectionBuilder {
     return this;
   }
 
+  public RedisConnectionBuilder addProcessInstanceMigrationListener(Consumer<Schema.ProcessInstanceMigrationRecord> listener) {
+    addListener(ValueType.PROCESS_INSTANCE_MIGRATION.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addProcessInstanceBatchListener(Consumer<Schema.ProcessInstanceBatchRecord> listener) {
+    addListener(ValueType.PROCESS_INSTANCE_BATCH.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addProcessInstanceResultListener(Consumer<Schema.ProcessInstanceResultRecord> listener) {
+    addListener(ValueType.PROCESS_INSTANCE_RESULT.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addResourceListener(Consumer<Schema.ResourceRecord> listener) {
+    addListener(ValueType.RESOURCE.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addMessageBatchListener(Consumer<Schema.MessageBatchRecord> listener) {
+    addListener(ValueType.MESSAGE_BATCH.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addMessageCorrelationListener(Consumer<Schema.MessageCorrelationRecord> listener) {
+    addListener(ValueType.MESSAGE_CORRELATION.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addClockListener(Consumer<Schema.ClockRecord> listener) {
+    addListener(ValueType.CLOCK.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addUserListener(Consumer<Schema.UserRecord> listener) {
+    addListener(ValueType.USER.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addAuthorizationListener(Consumer<Schema.AuthorizationRecord> listener) {
+    addListener(ValueType.AUTHORIZATION.name(), listener);
+    return this;
+  }
+
   /**
    * Start a background task that reads from Zeebe Streams. <br>
    * Call {@link #close()} to stop reading.
