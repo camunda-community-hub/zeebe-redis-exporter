@@ -30,6 +30,8 @@ public class ZeebeRedis implements AutoCloseable {
   static {
     RECORD_MESSAGE_TYPES =
         Map.ofEntries(
+            typeEntry(ValueType.AUTHORIZATION.name(), Schema.AuthorizationRecord.class),
+            typeEntry(ValueType.CLOCK.name(), Schema.ClockRecord.class),
             typeEntry(
                 ValueType.COMPENSATION_SUBSCRIPTION.name(),
                 Schema.CompensationSubscriptionRecord.class),
@@ -43,6 +45,8 @@ public class ZeebeRedis implements AutoCloseable {
             typeEntry(ValueType.INCIDENT.name(), Schema.IncidentRecord.class),
             typeEntry(ValueType.JOB.name(), Schema.JobRecord.class),
             typeEntry(ValueType.JOB_BATCH.name(), Schema.JobBatchRecord.class),
+            typeEntry(ValueType.MESSAGE_BATCH.name(), Schema.MessageBatchRecord.class),
+            typeEntry(ValueType.MESSAGE_CORRELATION.name(), Schema.MessageCorrelationRecord.class),
             typeEntry(
                 ValueType.MESSAGE_START_EVENT_SUBSCRIPTION.name(),
                 Schema.MessageStartEventSubscriptionRecord.class),
@@ -52,14 +56,19 @@ public class ZeebeRedis implements AutoCloseable {
             typeEntry(ValueType.PROCESS.name(), Schema.ProcessRecord.class),
             typeEntry(ValueType.PROCESS_EVENT.name(), Schema.ProcessEventRecord.class),
             typeEntry(ValueType.PROCESS_INSTANCE.name(), Schema.ProcessInstanceRecord.class),
+            typeEntry(ValueType.PROCESS_INSTANCE_BATCH.name(), Schema.ProcessInstanceBatchRecord.class),
             typeEntry(
                 ValueType.PROCESS_INSTANCE_CREATION.name(),
                 Schema.ProcessInstanceCreationRecord.class),
+            typeEntry(ValueType.PROCESS_INSTANCE_MIGRATION.name(), Schema.ProcessInstanceMigrationRecord.class),
+            typeEntry(ValueType.PROCESS_INSTANCE_RESULT.name(), Schema.ProcessInstanceResultRecord.class),
             typeEntry(
                 ValueType.PROCESS_MESSAGE_SUBSCRIPTION.name(),
                 Schema.ProcessMessageSubscriptionRecord.class),
+            typeEntry(ValueType.RESOURCE.name(), Schema.ResourceRecord.class),
             typeEntry(ValueType.RESOURCE_DELETION.name(), Schema.ResourceDeletionRecord.class),
             typeEntry(ValueType.TIMER.name(), Schema.TimerRecord.class),
+            typeEntry(ValueType.USER.name(), Schema.UserRecord.class),
             typeEntry(ValueType.USER_TASK.name(), Schema.UserTaskRecord.class),
             typeEntry(ValueType.VARIABLE.name(), Schema.VariableRecord.class),
             typeEntry(ValueType.VARIABLE_DOCUMENT.name(), Schema.VariableDocumentRecord.class));

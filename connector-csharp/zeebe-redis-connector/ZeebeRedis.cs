@@ -70,6 +70,22 @@ namespace Io.Zeebe.Redis.Connect.Csharp
         // Listeners
         //---------------------------------------------------------------------
 
+        public ZeebeRedis AddAuthorizationListener(Action<AuthorizationRecord> listener)
+        {
+            var stream = AuthorizationRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new AuthorizationRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddClockListener(Action<ClockRecord> listener)
+        {
+            var stream = ClockRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ClockRecordConsumer(listener));
+            return this;
+        }
+
         public ZeebeRedis AddCompensationSubscriptionListener(Action<CompensationSubscriptionRecord> listener)
         {
             var stream = CompensationSubscriptionRecordConsumer.STREAM;
@@ -142,6 +158,22 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             return this;
         }
 
+        public ZeebeRedis AddMessageBatchListener(Action<MessageBatchRecord> listener)
+        {
+            var stream = MessageBatchRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new MessageBatchRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddMessageCorrelationListener(Action<MessageCorrelationRecord> listener)
+        {
+            var stream = MessageCorrelationRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new MessageCorrelationRecordConsumer(listener));
+            return this;
+        }
+
         public ZeebeRedis AddMessageStartEventSubscriptionListener(Action<MessageStartEventSubscriptionRecord> listener)
         {
             var stream = MessageStartEventSubscriptionRecordConsumer.STREAM;
@@ -190,11 +222,35 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             return this;
         }
 
+        public ZeebeRedis AddProcessInstanceBatchListener(Action<ProcessInstanceBatchRecord> listener)
+        {
+            var stream = ProcessInstanceBatchRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ProcessInstanceBatchRecordConsumer(listener));
+            return this;
+        }
+
         public ZeebeRedis AddProcessInstanceCreationListener(Action<ProcessInstanceCreationRecord> listener)
         {
             var stream = ProcessInstanceCreationRecordConsumer.STREAM;
             _streamPositions.Add(new StreamPosition(stream, ">"));
             _consumer.Add(stream, new ProcessInstanceCreationRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddProcessInstanceMigrationListener(Action<ProcessInstanceMigrationRecord> listener)
+        {
+            var stream = ProcessInstanceMigrationRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ProcessInstanceMigrationRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddProcessInstanceResultListener(Action<ProcessInstanceResultRecord> listener)
+        {
+            var stream = ProcessInstanceResultRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ProcessInstanceResultRecordConsumer(listener));
             return this;
         }
 
@@ -214,6 +270,14 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             return this;
         }
 
+        public ZeebeRedis AddResourceListener(Action<ResourceRecord> listener)
+        {
+            var stream = ResourceRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ResourceRecordConsumer(listener));
+            return this;
+        }
+
         public ZeebeRedis AddTimerListener(Action<TimerRecord> listener)
         {
             var stream = TimerRecordConsumer.STREAM;
@@ -227,6 +291,14 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             var stream = UserTaskRecordConsumer.STREAM;
             _streamPositions.Add(new StreamPosition( stream, ">"));
             _consumer.Add(stream, new UserTaskRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddUserListener(Action<UserRecord> listener)
+        {
+            var stream = UserRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new UserRecordConsumer(listener));
             return this;
         }
 

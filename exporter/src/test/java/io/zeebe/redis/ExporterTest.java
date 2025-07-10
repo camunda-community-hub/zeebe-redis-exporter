@@ -81,7 +81,7 @@ public class ExporterTest {
     assertThat(record.getRecord().is(Schema.DeploymentRecord.class)).isTrue();
 
     final var deploymentRecord = record.getRecord().unpack(Schema.DeploymentRecord.class);
-    final Schema.DeploymentRecord.Resource resource = deploymentRecord.getResources(0);
+    final Schema.DeploymentRecord.DeploymentResource resource = deploymentRecord.getResources(0);
     assertThat(resource.getResourceName()).isEqualTo("process.bpmn");
   }
 
@@ -163,7 +163,7 @@ public class ExporterTest {
 
     final var userTaskRecord = record.getRecord().unpack(Schema.UserTaskRecord.class);
     assertThat(userTaskRecord.getElementId()).isEqualTo("userTask");
-    assertThat(userTaskRecord.getCandidateGroupCount()).isEqualTo(1);
-    assertThat(userTaskRecord.getCandidateGroup(0)).isEqualTo("testGroup");
+    assertThat(userTaskRecord.getCandidateGroupsCount()).isEqualTo(1);
+    assertThat(userTaskRecord.getCandidateGroups(0)).isEqualTo("testGroup");
   }
 }
