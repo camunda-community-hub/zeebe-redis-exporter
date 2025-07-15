@@ -306,7 +306,7 @@ namespace zeeb_redis_connector_test
                 Assert.Contains("CREATING", userTaskIntent); 
                 Assert.Contains("CREATED", userTaskIntent);
 
-                var candidateGroup = userTaskRecords.Select(r => r.CandidateGroup.Single());
+                var candidateGroup = userTaskRecords.Select(r => r.CandidateGroups.Single());
                 Assert.Contains("testGroup", candidateGroup);
 
                 return true;

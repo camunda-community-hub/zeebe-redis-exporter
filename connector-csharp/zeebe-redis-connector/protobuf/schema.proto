@@ -66,6 +66,11 @@ message RecordMetadata {
     PROCESS_INSTANCE_BATCH = 32;
     MESSAGE_BATCH = 33;
     FORM = 34;
+    CLOCK = 35;
+    MESSAGE_CORRELATION = 36;
+    RESOURCE = 37;
+    USER = 38;
+    AUTHORIZATION = 39;
   }
 
   enum RecordType {
@@ -90,7 +95,7 @@ message RecordMetadata {
 }
 
 message DeploymentRecord {
-  message Resource {
+  message DeploymentResource {
     bytes resource = 1;
     string resourceName = 2;
   }
@@ -103,6 +108,8 @@ message DeploymentRecord {
     bytes checksum = 6;
     bool isDuplicate = 7;
     string tenantId = 8;
+    int64 deploymentKey = 9;
+    optional string versionTag = 10;
   }
 
   message DecisionMetadata {
@@ -114,6 +121,8 @@ message DeploymentRecord {
     int64 decisionRequirementsKey = 6;
     bool isDuplicate = 7;
     string tenantId = 8;
+    int64 deploymentKey = 9;
+    optional string versionTag = 10;
   }
 
   message FormMetadata {
@@ -124,15 +133,30 @@ message DeploymentRecord {
     bytes checksum = 5;
     bool isDuplicate = 6;
     string tenantId = 7;
+    int64 deploymentKey = 8;
+    optional string versionTag = 9;
+  }
+
+  message ResourceMetadata {
+    string resourceId = 1;
+    int32 version = 2;
+    string versionTag = 3;
+    int64 resourceKey = 4;
+    bytes checksum = 5;
+    string resourceName = 6;
+    bool isDuplicate = 7;
+    int64 deploymentKey = 8;
   }
 
   RecordMetadata metadata = 1;
-  repeated Resource resources = 2;
-  repeated ProcessMetadata processMetadata = 3;
+  repeated DeploymentResource resources = 2;
+  repeated ProcessMetadata processesMetadata = 3;
   repeated DecisionRequirementsMetadata decisionRequirementsMetadata = 4;
-  repeated DecisionMetadata decisionMetadata = 5;
+  repeated DecisionMetadata decisionsMetadata = 5;
   string tenantId = 6;
   repeated FormMetadata formMetadata = 7;
+  int64 deploymentKey = 8;
+  repeated  ResourceMetadata resourceMetadata = 9;
 }
 
 message DeploymentDistributionRecord {
@@ -168,6 +192,18 @@ message IncidentRecord {
 }
 
 message JobRecord {
+  enum JobKind {
+    UNKNOWN_JOB_KIND = 0;
+    BPMN_ELEMENT = 1;
+    EXECUTION_LISTENER = 2;
+    TASK_LISTENER = 3;
+  }
+  enum JobListenerEventType {
+    UNSPECIFIED = 0;
+    START = 1;
+    END = 2;
+  }
+
   RecordMetadata metadata = 1;
 
   string type = 2;
@@ -175,7 +211,7 @@ message JobRecord {
   string worker = 3;
   int32 retries = 4;
   int64 deadline = 5;
-  string errorMessage = 6;
+  optional string errorMessage = 6;
 
   google.protobuf.Struct customHeaders = 7;
   google.protobuf.Struct variables = 8;
@@ -183,10 +219,17 @@ message JobRecord {
   string elementId = 9;
   int64 elementInstanceKey = 10;
   string bpmnProcessId = 11;
-  int32 workflowDefinitionVersion = 12;
+  int32 processDefinitionVersion = 12;
   int64 processInstanceKey = 13;
   int64 processDefinitionKey = 14;
   string tenantId = 15;
+  optional string errorCode = 16;
+  int64 recurringTime = 17;
+  int64 retryBackoff = 18;
+  int64 timeout = 19;
+  repeated string changedAttributes = 20;
+  JobKind jobKind = 21;
+  JobListenerEventType jobListenerEventType= 22;
 }
 
 message JobBatchRecord {
@@ -211,6 +254,7 @@ message MessageRecord {
   int64 timeToLive = 5;
   google.protobuf.Struct variables = 6;
   string tenantId = 7;
+  int64 deadline = 8;
 }
 
 message MessageSubscriptionRecord {
@@ -300,6 +344,11 @@ message ProcessInstanceRecord {
 }
 
 message ProcessInstanceCreationRecord {
+
+  message ProcessInstanceCreationStartInstruction {
+    string elementId = 1;
+  }
+
   RecordMetadata metadata = 1;
 
   string bpmnProcessId = 2;
@@ -308,6 +357,8 @@ message ProcessInstanceCreationRecord {
   int64 processInstanceKey = 5;
   google.protobuf.Struct variables = 6;
   string tenantId = 7;
+
+  repeated ProcessInstanceCreationStartInstruction startInstructions = 8;
 }
 
 message ProcessMessageSubscriptionRecord {
@@ -357,6 +408,8 @@ message DecisionRecord {
   int64 decisionRequirementsKey = 7;
   bool isDuplicate = 8;
   string tenantId = 9;
+  int64 deploymentKey = 10;
+  optional string versionTag = 11;
 }
 
 message DecisionRequirementsMetadata {
@@ -456,8 +509,8 @@ message ProcessInstanceModificationRecord {
 
 message CheckpointRecord {
   RecordMetadata metadata = 1;
-  int64 id = 2;
-  int64 position = 3;
+  int64 checkpointId = 2;
+  int64 checkpointPosition = 3;
 }
 
 message SignalRecord {
@@ -499,8 +552,8 @@ message UserTaskRecord {
   RecordMetadata metadata = 1;
   int64 userTaskKey = 2;
   string assignee = 3;
-  string candidateGroups = 4 [deprecated = true];
-  string candidateUsers = 5 [deprecated = true];
+  repeated string candidateGroups = 4;
+  repeated string candidateUsers = 5;
   string dueDate = 6;
   string followUpDate = 7;
   int64 formKey = 8;
@@ -512,13 +565,12 @@ message UserTaskRecord {
   string elementId = 14;
   int64 elementInstanceKey = 15;
   string tenantId = 16;
-  repeated string candidateGroup = 17;
-  repeated string candidateUser = 18;
-  string externalFormReference = 19;
-  google.protobuf.Struct customHeaders = 20;
-  repeated string changedAttribute = 21;
-  string action = 22;
-  int64 creationTimestamp = 23;
+  string externalFormReference = 17;
+  google.protobuf.Struct customHeaders = 18;
+  repeated string changedAttributes = 19;
+  string action = 20;
+  int64 creationTimestamp = 21;
+  int32 priority = 22;
 }
 
 message CompensationSubscriptionRecord {
@@ -542,4 +594,134 @@ message EscalationRecord {
   string escalationCode = 3;
   string throwElementId = 4;
   string catchElementId = 5;
+}
+
+message ProcessInstanceMigrationRecord {
+
+  message ProcessInstanceMigrationMappingInstruction {
+    string sourceElementId = 1;
+    string targetElementId = 2;
+  }
+
+  RecordMetadata metadata = 1;
+  int64 processInstanceKey = 2;
+  int64 targetProcessDefinitionKey = 3;
+  repeated ProcessInstanceMigrationMappingInstruction mappingInstructions = 4;
+
+}
+
+message MessageBatchRecord {
+  RecordMetadata metadata = 1;
+  repeated int64 messageKeys = 2;
+}
+
+message ClockRecord {
+  RecordMetadata metadata = 1;
+  int64 time = 2;
+}
+
+message MessageCorrelationRecord {
+  RecordMetadata metadata = 1;
+  string name = 2;
+  string correlationKey = 3 ;
+  int64 messageKey = 4;
+  int64 requestId = 5;
+  int32 requestStreamId = 6;
+}
+
+message ProcessInstanceBatchRecord {
+  RecordMetadata metadata = 1;
+  int64 processInstanceKey = 2;
+  int64 batchElementInstanceKey = 3;
+  int64 index = 4;
+  string tenantId = 5;
+}
+
+message ProcessInstanceResultRecord {
+  RecordMetadata metadata = 1;
+  string bpmnProcessId = 2;
+  int32 version = 3;
+  int64 processDefinitionKey = 4;
+  int64 processInstanceKey = 5;
+  google.protobuf.Struct variables = 6;
+  string tenantId = 7;
+}
+
+message ResourceRecord {
+  RecordMetadata metadata = 1;
+  string resourceId = 2;
+  int32 version = 3;
+  string versionTag = 4;
+  int64 resourceKey = 5;
+  bytes checksum = 6;
+  string resourceName = 7;
+  bool isDuplicate = 8;
+  int64 deploymentKey = 9;
+  string tenantId = 10;
+  string resourceProp = 11;
+}
+
+message UserRecord {
+
+  enum UserType {
+      UNKNOWN_USER_TYPE = 0;
+      DEFAULT = 1;
+      REGULAR = 2;
+  }
+
+  RecordMetadata metadata = 1;
+  int64 userKey = 2;
+  string username = 3;
+  string name = 4;
+  string email = 5;
+  string password = 6;
+  UserType userType = 7;
+}
+
+message AuthorizationRecord {
+  enum PermissionAction {
+      UNKNOWN_ACTION = 0;
+      ADD = 1;
+      REMOVE = 2;
+  }
+  enum AuthorizationOwnerType {
+      _USER = 0;
+      _ROLE = 1;
+      _GROUP = 2;
+      _UNSPECIFIED = 3;
+  }
+  enum AuthorizationResourceType {
+      AUTHORIZATION = 0;
+      MESSAGE = 1;
+      JOB = 2;
+      APPLICATION = 3;
+      TENANT = 4;
+      DEPLOYMENT = 5;
+      PROCESS_DEFINITION = 6;
+      USER_TASK = 7;
+      DECISION_REQUIREMENTS_DEFINITION = 8;
+      DECISION_DEFINITION = 9;
+      USER_GROUP = 10;
+      USER = 11;
+      ROLE = 12;
+      UNSPECIFIED = 13;
+  }
+  message PermissionValue {
+    enum PermissionType {
+        UNSPECIFIED = 0;
+        CREATE = 1;
+        READ = 2;
+        UPDATE = 3;
+        DELETE = 4;
+    }
+    PermissionType permissionType = 1;
+    repeated string resourceIds = 2;
+  }
+
+  RecordMetadata metadata = 1;
+  PermissionAction action = 2;
+  int64 ownerKey = 3;
+  AuthorizationOwnerType ownerType = 4;
+  AuthorizationResourceType resourceType = 5;
+  repeated PermissionValue permissions = 6;
 }

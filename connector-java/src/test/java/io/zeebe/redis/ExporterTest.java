@@ -247,8 +247,8 @@ public class ExporterTest {
         .first()
         .satisfies(
             u -> {
-              assertThat(u.getCandidateGroupCount()).isEqualTo(1);
-              assertThat(u.getCandidateGroup(0)).isEqualTo("testGroup");
+              assertThat(u.getCandidateGroupsCount()).isEqualTo(1);
+              assertThat(u.getCandidateGroups(0)).isEqualTo("testGroup");
             });
   }
 }

@@ -26,7 +26,8 @@ If you have any suggestions, please let us know - it's a community project.
 
 ## Prerequisites
 
-* Camunda 8.5+
+* Camunda 8.7+
+* For Camunda versions 8.5 to 8.6 please use version 1.1.0 of this exporter
 * For Camunda versions 8.2 to 8.4 please use version 0.9.11 of this exporter 
 
 ## Usage
@@ -141,7 +142,7 @@ See [connector-csharp/README.md](https://github.com/camunda-community-hub/zeebe-
 A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
-docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.7.5-1.1.0
+docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.7.7-2.0.0
 ```
 
 For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter.
@@ -157,12 +158,12 @@ docker-compose up -d
 1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) _(camunda-zeebe-%{VERSION}.tar.gz
    )_
 
-1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-1.1.0-jar-with-dependencies.jar_)
+1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-2.0.0-jar-with-dependencies.jar_)
 
 1. Copy the exporter JAR  into the broker folder `~/zeebe-broker-%{VERSION}/exporters`.
 
     ```
-    cp exporter/target/zeebe-redis-exporter-1.1.0-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
+    cp exporter/target/zeebe-redis-exporter-2.0.0-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
     ```
 
 1. Add the exporter to the broker configuration `~/zeebe-broker-%{VERSION}/config/application.yaml`:
@@ -173,7 +174,7 @@ docker-compose up -d
         exporters:
           redis:
             className: io.zeebe.redis.exporter.RedisExporter
-            jarPath: exporters/zeebe-redis-exporter-1.1.0-jar-with-dependencies.jar
+            jarPath: exporters/zeebe-redis-exporter-2.0.0-jar-with-dependencies.jar
     ```
 
 1. Set the environment variable `ZEEBE_REDIS_REMOTE_ADDRESS` to your Redis URL.
@@ -282,7 +283,7 @@ services:
       - "26500:26500"
       - "9600:9600"
     volumes:
-      - ../exporter/target/zeebe-redis-exporter-1.1.0-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
+      - ../exporter/target/zeebe-redis-exporter-2.0.0-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
       - ./application.yaml:/usr/local/zeebe/config/application.yaml
     networks:
       - zeebe_network
