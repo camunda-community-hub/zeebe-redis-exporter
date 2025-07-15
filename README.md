@@ -40,7 +40,7 @@ Add the Maven dependency to your `pom.xml`
 <dependency>
 	<groupId>io.zeebe.redis</groupId>
 	<artifactId>zeebe-redis-connector</artifactId>
-	<version>1.1.0</version>
+	<version>2.0.0</version>
 </dependency>
 ```
 
