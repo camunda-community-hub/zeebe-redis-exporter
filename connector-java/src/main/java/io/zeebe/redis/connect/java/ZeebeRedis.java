@@ -56,12 +56,16 @@ public class ZeebeRedis implements AutoCloseable {
             typeEntry(ValueType.PROCESS.name(), Schema.ProcessRecord.class),
             typeEntry(ValueType.PROCESS_EVENT.name(), Schema.ProcessEventRecord.class),
             typeEntry(ValueType.PROCESS_INSTANCE.name(), Schema.ProcessInstanceRecord.class),
-            typeEntry(ValueType.PROCESS_INSTANCE_BATCH.name(), Schema.ProcessInstanceBatchRecord.class),
+            typeEntry(
+                ValueType.PROCESS_INSTANCE_BATCH.name(), Schema.ProcessInstanceBatchRecord.class),
             typeEntry(
                 ValueType.PROCESS_INSTANCE_CREATION.name(),
                 Schema.ProcessInstanceCreationRecord.class),
-            typeEntry(ValueType.PROCESS_INSTANCE_MIGRATION.name(), Schema.ProcessInstanceMigrationRecord.class),
-            typeEntry(ValueType.PROCESS_INSTANCE_RESULT.name(), Schema.ProcessInstanceResultRecord.class),
+            typeEntry(
+                ValueType.PROCESS_INSTANCE_MIGRATION.name(),
+                Schema.ProcessInstanceMigrationRecord.class),
+            typeEntry(
+                ValueType.PROCESS_INSTANCE_RESULT.name(), Schema.ProcessInstanceResultRecord.class),
             typeEntry(
                 ValueType.PROCESS_MESSAGE_SUBSCRIPTION.name(),
                 Schema.ProcessMessageSubscriptionRecord.class),
