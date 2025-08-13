@@ -4,8 +4,14 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import io.camunda.zeebe.protocol.record.RecordType;
 import io.camunda.zeebe.protocol.record.ValueType;
+import io.camunda.zeebe.protocol.record.intent.DeploymentIntent;
+import io.camunda.zeebe.protocol.record.intent.Intent;
+import io.camunda.zeebe.protocol.record.intent.JobIntent;
+import io.camunda.zeebe.protocol.record.intent.ProcessIntent;
 import io.zeebe.redis.exporter.ExporterConfiguration;
 import io.zeebe.redis.exporter.RecordFilter;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -19,6 +25,7 @@ public class RecordFilterTest {
     mockConfig = new TestExporterConfiguration();
     mockConfig.setEnabledRecordTypes("EVENT,COMMAND");
     mockConfig.setEnabledValueTypes("USER_TASK,JOB");
+    mockConfig.setEnabledIntents("CREATED,UPDATED");
 
     recordFilter = new RecordFilter(mockConfig);
   }
@@ -38,23 +45,77 @@ public class RecordFilterTest {
   }
 
   @Test
+  public void testAcceptIntent() {
+    // Test with allowed intents
+    assertTrue(recordFilter.acceptIntent(JobIntent.CREATED));
+    assertTrue(recordFilter.acceptIntent(JobIntent.UPDATED));
+    assertFalse(recordFilter.acceptIntent(JobIntent.COMPLETED));
+  }
+
+  @Test
+  public void testAcceptIntentFuzzy() {
+    TestExporterConfiguration emptyConfig = new TestExporterConfiguration();
+    // Intents which are available:
+    // JobIntent -> CREATED,UPDATED
+    // ProcessIntent -> CREATED
+    // DeploymentIntent -> CREATED
+    emptyConfig.setEnabledIntents("CREATED,UPDATED");
+
+    RecordFilter recordFilter = new RecordFilter(emptyConfig);
+
+    assertTrue(recordFilter.acceptIntent(JobIntent.CREATED));
+    assertTrue(recordFilter.acceptIntent(JobIntent.UPDATED));
+    assertFalse(recordFilter.acceptIntent(JobIntent.COMPLETED));
+    // Test may be true if Intent declaration can be fuzzy
+    assertTrue(recordFilter.acceptIntent(ProcessIntent.CREATED));
+    assertTrue(recordFilter.acceptIntent(DeploymentIntent.CREATED));
+  }
+
+  @Test
+  public void testAcceptIntentStrict() {
+    TestExporterConfiguration emptyConfig = new TestExporterConfiguration();
+    // Intents which are available:
+    // JobIntent -> CREATED,UPDATED
+    // ProcessIntent -> CREATED
+    // DeploymentIntent -> CREATED
+    emptyConfig.setEnabledIntents("JobIntent=CREATED,UPDATED;DeploymentIntent=CREATED");
+
+    RecordFilter recordFilter = new RecordFilter(emptyConfig);
+
+    assertTrue(recordFilter.acceptIntent(JobIntent.CREATED));
+    assertTrue(recordFilter.acceptIntent(JobIntent.UPDATED));
+    assertFalse(recordFilter.acceptIntent(JobIntent.COMPLETED));
+    // Test must be false if Intent declaration should be strict
+    assertFalse(recordFilter.acceptIntent(ProcessIntent.CREATED));
+    assertTrue(recordFilter.acceptIntent(DeploymentIntent.CREATED));
+  }
+
+  @Test
   public void testEmptyConfigurationAcceptsDefault() {
     // Test with empty configuration - should accept all types
     TestExporterConfiguration emptyConfig = new TestExporterConfiguration();
     emptyConfig.setEnabledRecordTypes("");
     emptyConfig.setEnabledValueTypes("");
+    emptyConfig.setEnabledIntents("");
 
     RecordFilter emptyFilter = new RecordFilter(emptyConfig);
 
     // Should accept all record types when configuration is empty
-    assertTrue(emptyFilter.acceptType(RecordType.EVENT));
-    assertTrue(emptyFilter.acceptType(RecordType.COMMAND));
-    assertTrue(emptyFilter.acceptType(RecordType.COMMAND_REJECTION));
+    for (RecordType recordType : RecordType.values()) {
+      assertTrue(emptyFilter.acceptType(recordType));
+    }
 
     // Should accept all value types when configuration is empty
-    assertTrue(emptyFilter.acceptValue(ValueType.USER_TASK));
-    assertTrue(emptyFilter.acceptValue(ValueType.JOB));
-    assertTrue(emptyFilter.acceptValue(ValueType.VARIABLE));
+    for (ValueType valueType : ValueType.values()) {
+      assertTrue(emptyFilter.acceptValue(valueType));
+    }
+
+    for (Intent intent : Intent.INTENT_CLASSES.stream()
+        .flatMap(clazz -> Arrays.stream(clazz.getEnumConstants()))
+        .collect(Collectors.toList())) {
+      // Should accept all intents when configuration is empty
+      assertTrue(emptyFilter.acceptIntent(intent));
+    }
   }
 
   @Test
@@ -63,6 +124,7 @@ public class RecordFilterTest {
     TestExporterConfiguration whitespaceConfig = new TestExporterConfiguration();
     whitespaceConfig.setEnabledRecordTypes(" EVENT , COMMAND ");
     whitespaceConfig.setEnabledValueTypes(" USER_TASK , JOB ");
+    whitespaceConfig.setEnabledIntents(" CREATED , UPDATED ");
 
     RecordFilter whitespaceFilter = new RecordFilter(whitespaceConfig);
 
@@ -74,6 +136,7 @@ public class RecordFilterTest {
   private static class TestExporterConfiguration extends ExporterConfiguration {
     private String enabledRecordTypes = "";
     private String enabledValueTypes = "";
+    private String enabledIntents = "";
 
     @Override
     public String getEnabledRecordTypes() {
@@ -91,6 +154,15 @@ public class RecordFilterTest {
 
     public void setEnabledValueTypes(String enabledValueTypes) {
       this.enabledValueTypes = enabledValueTypes;
+    }
+
+    @Override
+    public String getEnabledIntents() {
+      return enabledIntents;
+    }
+
+    public void setEnabledIntents(String enabledIntents) {
+      this.enabledIntents = enabledIntents;
     }
   }
 }
