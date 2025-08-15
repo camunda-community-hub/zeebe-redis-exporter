@@ -190,6 +190,7 @@ In the Zeebe configuration, you can furthermore change
 
 * whether to use a cluster client
 * the value and record types which are exported
+* the intents which are exported (with fuzzy or strict filtering)
 * the name resulting in a stream prefix
 * the cleanup cycle
 * the minimum time-to-live of exported records
@@ -219,6 +220,9 @@ zeebe:
     
           # comma separated list of io.zeebe.protocol.record.RecordType to export or empty to export all types
           enabledRecordTypes: ""
+          
+          # comma separated list or map of io.camunda.zeebe.protocol.record.intent.Intent to export or empty to export all intents.
+          enabledIntents: ""
         
           # Redis Stream prefix
           name: "zeebe"
@@ -304,6 +308,43 @@ services:
 </details>
 
 Check out the Redis documentation on how to [manage](https://redis.io/docs/management/) Redis, configure optional persistence, run in a cluster, etc.
+
+#### Intent Filtering
+
+The exporter supports fine-grained intent filtering to control which specific intents are exported. This provides two filtering modes:
+
+| **Parameter**                        | **Description**                                                                                                                                         |
+|--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `ZEEBE_REDIS_ENABLED_INTENTS`        | Controls which intents are exported. Supports both fuzzy and strict filtering modes (see examples below).                                              |
+
+**Fuzzy Intent Filtering (Simple List)**
+
+Export specific intents across all intent classes:
+```
+ZEEBE_REDIS_ENABLED_INTENTS="CREATED,UPDATED,COMPLETED"
+```
+
+This will export `CREATED`, `UPDATED`, and `COMPLETED` intents from all intent classes that have these intents (e.g., `JobIntent.CREATED`, `ProcessIntent.CREATED`, `DeploymentIntent.CREATED`, etc.).
+
+**Strict Intent Filtering (Class-Specific)**
+
+Export specific intents only from designated intent classes:
+```
+ZEEBE_REDIS_ENABLED_INTENTS="JobIntent=CREATED,UPDATED,COMPLETED;DeploymentIntent=CREATED;ProcessIntent=ACTIVATED,COMPLETED"
+```
+
+This provides precise control by specifying which intents to export from each intent class:
+- `JobIntent`: Only `CREATED`, `UPDATED`, and `COMPLETED` 
+- `DeploymentIntent`: Only `CREATED`
+- `ProcessIntent`: Only `ACTIVATED` and `COMPLETED`
+
+**Default Behavior**
+
+When `ZEEBE_REDIS_ENABLED_INTENTS` is not configured or empty, all intents are exported (maintains backward compatibility).
+
+The exporter automatically detects the filtering mode based on the configuration format:
+- Contains `=` → Strict filtering mode
+- No `=` → Fuzzy filtering mode
 
 #### Cleanup
 
