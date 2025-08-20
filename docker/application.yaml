@@ -5,11 +5,14 @@ zeebe:
         className: io.zeebe.redis.exporter.RedisExporter
         jarPath: exporters/zeebe-redis-exporter-jar-with-dependencies.jar
         args:
+          # comma separated list of io.zeebe.protocol.record.RecordType to export or empty to export all types
+          enabledRecordTypes: ""
+
           # comma separated list of io.zeebe.protocol.record.ValueType to export or empty to export all types
           enabledValueTypes: ""
           
-          # comma separated list of io.zeebe.protocol.record.RecordType to export or empty to export all types
-          enabledRecordTypes: ""
+          # comma separated list of io.zeebe.protocol.record.intent.Intent to export or empty to export all intents
+          enabledIntents: ""
           
           # Redis Stream prefix
           name: "zeebe"
