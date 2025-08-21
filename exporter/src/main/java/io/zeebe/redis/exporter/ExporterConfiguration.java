@@ -142,11 +142,11 @@ public class ExporterConfiguration {
         + ", useClusterClient='"
         + isUseClusterClient()
         + '\''
-        + ", enabledValueTypes='"
-        + getEnabledValueTypes()
-        + '\''
         + ", enabledRecordTypes='"
         + getEnabledRecordTypes()
+        + '\''
+        + ", enabledValueTypes='"
+        + getEnabledValueTypes()
         + '\''
         + ", enabledIntents='"
         + getEnabledIntents()
@@ -169,6 +169,8 @@ public class ExporterConfiguration {
         + getConsumerJobTimeoutInSeconds()
         + ", consumerIdleTimeoutInSeconds="
         + getConsumerIdleTimeoutInSeconds()
+        + ", keyScanCycleInSeconds="
+        + getKeyScanCycleInSeconds()
         + ", ioThreadPoolSize="
         + getIoThreadPoolSize()
         + ", batchSize="
