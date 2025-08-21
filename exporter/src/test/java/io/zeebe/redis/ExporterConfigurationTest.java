@@ -28,4 +28,12 @@ public class ExporterConfigurationTest {
 
     assertEquals(expectedMap, ExporterConfiguration.parseAsMap(valueMap));
   }
+
+  @Test
+  public void testParseAsMapOneKey() {
+    var valueMap = "key1=value1,value2;";
+    var expectedMap = Map.of("key1", Arrays.asList("value1", "value2"));
+
+    assertEquals(expectedMap, ExporterConfiguration.parseAsMap(valueMap));
+  }
 }

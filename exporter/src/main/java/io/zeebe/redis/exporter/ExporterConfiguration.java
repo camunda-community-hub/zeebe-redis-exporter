@@ -206,8 +206,7 @@ public class ExporterConfiguration {
   }
 
   /**
-   * Parse configuration string into a map where keys are configuration keys and
-   * values are lists of
+   * Parse configuration string into a map where keys are configuration keys and values are lists of
    * configuration values for each key. Example:
    *
    * <pre>
@@ -225,9 +224,8 @@ public class ExporterConfiguration {
    * </pre>
    *
    * @param mapAsString the configuration string to parse, can be null or empty
-   * @return Map where keys are configuration keys and values are lists of
-   *         configuration values for
-   *         each key
+   * @return Map where keys are configuration keys and values are lists of configuration values for
+   *     each key
    */
   public static Map<String, List<String>> parseAsMap(String mapAsString) {
     Map<String, List<String>> map = new HashMap<>();

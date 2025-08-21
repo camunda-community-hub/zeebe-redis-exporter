@@ -110,9 +110,10 @@ public class RecordFilterTest {
       assertTrue(emptyFilter.acceptValue(valueType));
     }
 
-    for (Intent intent : Intent.INTENT_CLASSES.stream()
-        .flatMap(clazz -> Arrays.stream(clazz.getEnumConstants()))
-        .collect(Collectors.toList())) {
+    for (Intent intent :
+        Intent.INTENT_CLASSES.stream()
+            .flatMap(clazz -> Arrays.stream(clazz.getEnumConstants()))
+            .collect(Collectors.toList())) {
       // Should accept all intents when configuration is empty
       assertTrue(emptyFilter.acceptIntent(intent));
     }
@@ -130,6 +131,8 @@ public class RecordFilterTest {
 
     assertTrue(whitespaceFilter.acceptType(RecordType.EVENT));
     assertTrue(whitespaceFilter.acceptValue(ValueType.USER_TASK));
+    assertTrue(whitespaceFilter.acceptIntent(JobIntent.CREATED));
+    assertTrue(whitespaceFilter.acceptIntent(JobIntent.UPDATED));
   }
 
   // Test implementation of ExporterConfiguration
