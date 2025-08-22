@@ -318,7 +318,7 @@ The exporter supports fine-grained intent filtering to control which specific in
 |--------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `ZEEBE_REDIS_ENABLED_INTENTS`        | Controls which intents are exported. Supports both fuzzy and strict filtering modes (see examples below).                                              |
 
-**Fuzzy Intent Filtering (Simple List)**
+##### - Fuzzy Intent Filtering (Simple List)
 
 Export specific intents across all intent classes:
 ```
@@ -327,7 +327,7 @@ ZEEBE_REDIS_ENABLED_INTENTS="CREATED,UPDATED,COMPLETED"
 
 This will export `CREATED`, `UPDATED`, and `COMPLETED` intents from all intent classes that have these intents (e.g., `JobIntent.CREATED`, `ProcessIntent.CREATED`, `DeploymentIntent.CREATED`, etc.).
 
-**Strict Intent Filtering (Class-Specific)**
+##### - Strict Intent Filtering (Class-Specific)
 
 Export specific intents only from designated intent classes:
 ```
@@ -339,7 +339,7 @@ This provides precise control by specifying which intents to export from each in
 - `DeploymentIntent`: Only `CREATED`
 - `ProcessIntent`: Only `ACTIVATED` and `COMPLETED`
 
-**Default Behavior**
+##### - Default Behavior
 
 When `ZEEBE_REDIS_ENABLED_INTENTS` is not configured or empty, all intents are exported (maintains backward compatibility).
 
