@@ -310,6 +310,7 @@ services:
 Check out the Redis documentation on how to [manage](https://redis.io/docs/management/) Redis, configure optional persistence, run in a cluster, etc.
 
 #### Intent Filtering
+*Since 2.1.0*
 
 The exporter supports fine-grained intent filtering to control which specific intents are exported. This provides two filtering modes:
 
