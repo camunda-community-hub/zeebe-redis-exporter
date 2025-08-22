@@ -84,7 +84,7 @@ namespace zeeb_redis_connector_test
             try
             {
                 // check consumed messages
-                Wait().AtMost(10, SECONDS).PollInterval(2, SECONDS).Until(() =>
+                Wait().AtMost(10, Seconds).PollInterval(2, Seconds).Until(() =>
                 {
                     // deployment
                     Assert.True(zeebeRedisListener.deploymentRecords.Count >= 2);

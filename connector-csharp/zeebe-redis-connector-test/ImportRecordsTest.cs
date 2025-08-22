@@ -130,7 +130,7 @@ namespace zeeb_redis_connector_test
                 .Retries(0).ErrorMessage("Error").Send());
 
             // then check consumed messages
-            Wait().AtMost(10, SECONDS).PollInterval(2, SECONDS).Until(() =>
+            Wait().AtMost(10, Seconds).PollInterval(2, Seconds).Until(() =>
             {
                 // deployment
                 Assert.True(deploymentRecords.Count >= 2);
@@ -294,7 +294,7 @@ namespace zeeb_redis_connector_test
                 .Send();
 
             // then check consumed messages
-            Wait().AtMost(10, SECONDS).PollInterval(2, SECONDS).Until(() =>
+            Wait().AtMost(10, Seconds).PollInterval(2, Seconds).Until(() =>
             {
                 Assert.True(userTaskRecords.Count >= 1);
                 Assert.All(userTaskRecords, r =>
