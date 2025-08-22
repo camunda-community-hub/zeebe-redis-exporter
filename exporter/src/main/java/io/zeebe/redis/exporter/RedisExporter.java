@@ -28,7 +28,7 @@ public class RedisExporter implements Exporter {
   private UniversalRedisClient redisClient;
   private UniversalRedisConnection<String, ?> cleanupConnection;
   private UniversalRedisConnection<String, ?> senderConnection;
-  private Function<Record, TransformedRecord> recordTransformer;
+  private Function<Record<?>, TransformedRecord> recordTransformer;
 
   private boolean useProtoBuf = false;
 
@@ -215,7 +215,7 @@ public class RedisExporter implements Exporter {
   }
 
   @Override
-  public void export(Record record) {
+  public void export(Record<?> record) {
     final String stream = streamPrefix.concat(record.getValueType().name());
     final TransformedRecord transformedRecord = recordTransformer.apply(record);
     final RedisEvent redisEvent =
@@ -233,13 +233,13 @@ public class RedisExporter implements Exporter {
     senderThread.schedule(this::sendBatches, config.getBatchCycleMillis(), TimeUnit.MILLISECONDS);
   }
 
-  private TransformedRecord recordToProtobuf(Record record) {
+  private TransformedRecord recordToProtobuf(Record<?> record) {
     final Schema.Record dto = RecordTransformer.toGenericRecord(record);
     var value = dto.toByteArray();
     return new TransformedRecord(value, value.length);
   }
 
-  private TransformedRecord recordToJson(Record record) {
+  private TransformedRecord recordToJson(Record<?> record) {
     var value = record.toJson();
     return new TransformedRecord(value, 2 * value.length() + 38);
   }
