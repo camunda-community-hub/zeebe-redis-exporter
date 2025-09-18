@@ -25,7 +25,7 @@
         <version.testcontainers>1.21.3</version.testcontainers>
 
         <plugin.version.maven-jar>3.4.2</plugin.version.maven-jar>
-        <plugin.version.maven-fmt>2.28</plugin.version.maven-fmt>
+        <plugin.version.maven-fmt>2.29</plugin.version.maven-fmt>
         <version.java>17</version.java>
 
         <!-- release parent settings -->
