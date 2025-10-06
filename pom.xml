@@ -20,7 +20,7 @@
         <!-- micrometer version see https://github.com/camunda/camunda/blob/main/parent/pom.xml -->
         <version.micrometer>1.15.2</version.micrometer>
         <version.log4j>2.25.2</version.log4j>
-        <version.zeebe.testcontainers>3.6.7</version.zeebe.testcontainers>
+        <version.zeebe.testcontainers>3.6.8</version.zeebe.testcontainers>
         <version.junit>5.14.0</version.junit>
         <version.testcontainers>1.21.3</version.testcontainers>
 
