@@ -134,6 +134,22 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             return this;
         }
 
+        public ZeebeRedis AddGroupListener(Action<GroupRecord> listener)
+        {
+            var stream = GroupRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new  GroupRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddIdentitySetupListener(Action<IdentitySetupRecord> listener)
+        {
+            var stream = IdentitySetupRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new IdentitySetupRecordConsumer(listener));
+            return this;
+        }
+
         public ZeebeRedis AddIncidentListener(Action<IncidentRecord> listener)
         {
             var stream = IncidentRecordConsumer.STREAM;
@@ -155,6 +171,14 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             var stream = JobBatchRecordConsumer.STREAM;
             _streamPositions.Add(new StreamPosition(stream, ">"));
             _consumer.Add(stream, new JobBatchRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddMappingRuleListener(Action<MappingRuleRecord> listener)
+        {
+            var stream = MappingRuleRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new MappingRuleRecordConsumer(listener));
             return this;
         }
 
@@ -195,6 +219,14 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             var stream = MessageRecordConsumer.STREAM;
             _streamPositions.Add(new StreamPosition(stream, ">"));
             _consumer.Add(stream, new MessageRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddMultiInstanceListener(Action<MultiInstanceRecord> listener)
+        {
+            var stream = MultiInstanceRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new  MultiInstanceRecordConsumer(listener));
             return this;
         }
 
@@ -278,6 +310,22 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             return this;
         }
 
+        public ZeebeRedis AddRoleRecord(Action<RoleRecord> listener)
+        {
+            var stream = RoleRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new  RoleRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddTenantListener(Action<TenantRecord> listener)
+        {
+            var stream = TenantRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new TenantRecordConsumer(listener));
+            return this;
+        }
+
         public ZeebeRedis AddTimerListener(Action<TimerRecord> listener)
         {
             var stream = TimerRecordConsumer.STREAM;
@@ -289,7 +337,7 @@ namespace Io.Zeebe.Redis.Connect.Csharp
         public ZeebeRedis AddUserTaskListener(Action<UserTaskRecord> listener)
         {
             var stream = UserTaskRecordConsumer.STREAM;
-            _streamPositions.Add(new StreamPosition( stream, ">"));
+            _streamPositions.Add(new StreamPosition(stream, ">"));
             _consumer.Add(stream, new UserTaskRecordConsumer(listener));
             return this;
         }
