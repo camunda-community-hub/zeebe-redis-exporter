@@ -13,6 +13,7 @@ public class ZeebeTestContainer extends ZeebeContainer {
   protected ZeebeTestContainer(RedisContainer redisContainer) {
     super(DockerImageName.parse("ghcr.io/camunda-community-hub/zeebe-with-redis-exporter"));
     withExposedPorts(26500, 9600);
+    withEnv("CAMUNDA_DATA_SECONDARYSTORAGE_TYPE", "none");
     dependsOn(redisContainer);
     this.redisContainer = redisContainer;
   }

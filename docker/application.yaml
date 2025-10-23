@@ -18,4 +18,4 @@ zeebe:
           name: "zeebe"
 
           # record serialization format: [protobuf|json]
-          format: "json"
+          format: "protobuf"
