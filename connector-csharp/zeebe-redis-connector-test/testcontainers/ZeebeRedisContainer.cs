@@ -41,6 +41,10 @@ namespace zeeb_redis_connector_test.testcontainers
                 .WithNetwork(_network)
                 .WithPortBinding(26500)
                 .WithEnvironment("ZEEBE_REDIS_REMOTE_ADDRESS", "redis://redis")
+                .WithEnvironment("CAMUNDA_DATA_SECONDARYSTORAGE_TYPE", "none")
+                .WithEnvironment("ZEEBE_BROKER_GATEWAY_ENABLE", "true")
+                .WithEnvironment("CAMUNDA_SECURITY_AUTHORIZATIONS_ENABLED", "false")
+                .WithEnvironment("CAMUNDA_SECURITY_AUTHENTICATION_UNPROTECTEDAPI", "true")
                 .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(26500))
                 .WithCleanUp(true)
                 .Build();
