@@ -14,7 +14,7 @@
     </parent>
 
     <properties>
-        <version.zeebe>8.8.8</version.zeebe>
+        <version.zeebe>8.8.9</version.zeebe>
         <version.exporter.protobuf>3.1.1</version.exporter.protobuf>
         <version.lettuce>6.8.2.RELEASE</version.lettuce>
         <!-- micrometer version see https://github.com/camunda/camunda/blob/main/parent/pom.xml -->
