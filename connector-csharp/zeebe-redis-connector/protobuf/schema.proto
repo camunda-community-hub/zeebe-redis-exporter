@@ -98,6 +98,10 @@ message RecordMetadata {
 
   string rejectionType = 9;
   string rejectionReason = 10;
+
+  map<string, string> authorizations = 11;
+  int64 operationReference = 12;
+  int64 batchOperationReference = 13;
 }
 
 message DeploymentRecord {
@@ -712,10 +716,10 @@ message UserRecord {
 
 message AuthorizationRecord {
   enum AuthorizationOwnerType {
-      _USER = 0;
-      _ROLE = 1;
-      _GROUP = 2;
-      _UNSPECIFIED = 3;
+    _USER = 0;
+    _ROLE = 1;
+    _GROUP = 2;
+    _UNSPECIFIED = 3;
   }
   enum AuthorizationResourceType {
     UNSPECIFIED_RESOURCE_TYPE = 0;
