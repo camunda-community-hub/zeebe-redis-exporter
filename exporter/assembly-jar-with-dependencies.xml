@@ -1,6 +1,5 @@
-<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.1"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.1 https://maven.apache.org/xsd/assembly-2.1.1.xsd">
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
   <id>jar-with-dependencies</id>
   <formats>
     <format>jar</format>
@@ -15,6 +14,9 @@
       <excludes>
         <!-- netty dependencies from lettuce must not interfere zeebe netty dependencies -->
         <exclude>io.netty:*</exclude>
+        <!-- do NOT include provided dependencies ! -->
+        <exclude>io.camunda:*</exclude>
+        <exclude>io.micrometer:*</exclude>
       </excludes>
     </dependencySet>
   </dependencySets>
