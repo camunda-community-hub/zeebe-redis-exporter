@@ -1,7 +1,6 @@
 package io.zeebe.redis;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
 
 import io.camunda.zeebe.model.bpmn.Bpmn;
 import io.camunda.zeebe.model.bpmn.BpmnModelInstance;
@@ -90,10 +89,12 @@ public class ExporterFilterTest {
     assertThat(record.getRecord().is(Schema.JobRecord.class)).isTrue();
 
     final var jobRecord = record.getRecord().unpack(Schema.JobRecord.class);
-    assertEquals(jobRecord.getType(), "test");
+    assertThat(jobRecord.getType()).isEqualTo("test");
 
-    assertEquals(jobRecord.getMetadata().getRecordType().toString(), RecordType.EVENT.toString());
-    assertEquals(jobRecord.getMetadata().getValueType().toString(), ValueType.JOB.toString());
-    assertEquals(jobRecord.getMetadata().getIntent().toString(), JobIntent.CREATED.toString());
+    assertThat(jobRecord.getMetadata().getRecordType().toString())
+        .isEqualTo(RecordType.EVENT.toString());
+    assertThat(jobRecord.getMetadata().getValueType().toString())
+        .isEqualTo(ValueType.JOB.toString());
+    assertThat(jobRecord.getMetadata().getIntent()).isEqualTo(JobIntent.CREATED.toString());
   }
 }
