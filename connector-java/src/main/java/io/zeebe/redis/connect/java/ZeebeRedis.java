@@ -75,7 +75,14 @@ public class ZeebeRedis implements AutoCloseable {
             typeEntry(ValueType.USER.name(), Schema.UserRecord.class),
             typeEntry(ValueType.USER_TASK.name(), Schema.UserTaskRecord.class),
             typeEntry(ValueType.VARIABLE.name(), Schema.VariableRecord.class),
-            typeEntry(ValueType.VARIABLE_DOCUMENT.name(), Schema.VariableDocumentRecord.class));
+            typeEntry(ValueType.VARIABLE_DOCUMENT.name(), Schema.VariableDocumentRecord.class),
+            typeEntry(ValueType.HISTORY_DELETION.name(), Schema.HistoryDeletionRecord.class),
+            typeEntry(ValueType.CLUSTER_VARIABLE.name(), Schema.ClusterVariableRecord.class),
+            typeEntry(ValueType.GLOBAL_LISTENER.name(), Schema.GlobalListenerRecord.class),
+            typeEntry(ValueType.GLOBAL_LISTENER_BATCH.name(), Schema.GlobalListenerBatchRecord.class),
+            typeEntry(ValueType.CONDITIONAL_EVALUATION.name(), Schema.ConditionalEvaluationRecord.class),
+            typeEntry(ValueType.EXPRESSION.name(), Schema.ExpressionRecord.class),
+            typeEntry(ValueType.CONDITIONAL_SUBSCRIPTION.name(), Schema.ConditionalSubscriptionRecord.class));
   }
 
   private static AbstractMap.SimpleEntry<String, Class<? extends com.google.protobuf.Message>>

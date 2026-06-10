@@ -1,6 +1,3 @@
-// Definition has been taken from
-// https://github.com/camunda-community-hub/zeebe-exporter-protobuf/blob/main/src/main/proto/schema.proto
-// ------------------------------------------------------------------------------------------------------
 syntax = 'proto3';
 package exporter_protocol;
 
@@ -22,6 +19,14 @@ message RecordId {
 // Convenience message for packing any kind of record
 message Record {
   google.protobuf.Any record = 1;
+}
+
+message LongPath {
+  repeated int64 path = 1;
+}
+
+message VariableSource {
+  string type = 1;
 }
 
 // Packs all non-value info into a single field; the idea here is so we can embed the *Record messages into other
@@ -58,7 +63,6 @@ message RecordMetadata {
     SIGNAL_SUBSCRIPTION = 24;
     SIGNAL = 25;
     RESOURCE_DELETION = 26;
-    COMMAND_DISTRIBUTION = 27;
     USER_TASK = 28;
     PROCESS_INSTANCE_MIGRATION = 29;
     COMPENSATION_SUBSCRIPTION = 30;
@@ -77,6 +81,13 @@ message RecordMetadata {
     GROUP = 43;
     MAPPING_RULE = 44;
     IDENTITY_SETUP = 45;
+    CLUSTER_VARIABLE = 46;
+    HISTORY_DELETION = 47;
+    CONDITIONAL_SUBSCRIPTION = 48;
+    CONDITIONAL_EVALUATION = 49;
+    GLOBAL_LISTENER_BATCH = 50;
+    EXPRESSION = 51;
+    GLOBAL_LISTENER = 52;
   }
 
   enum RecordType {
@@ -199,6 +210,10 @@ message IncidentRecord {
   int64 processDefinitionKey = 9;
   int64 variableScopeKey = 10;
   string tenantId = 11;
+  repeated LongPath elementInstancePath = 12;
+  repeated int64 processDefinitionPath = 13;
+  int64 rootProcessInstanceKey = 14;
+  repeated int32 callingElementPath = 15;
 }
 
 message JobRecord {
@@ -269,9 +284,17 @@ message JobRecord {
   JobListenerEventType jobListenerEventType= 22;
   JobResult result = 23;
   repeated string tags = 24;
+  int64 rootProcessInstanceKey = 25;
+  bool isJobToUserTaskMigration = 26;
 }
 
 message JobBatchRecord {
+  enum TenantFilter {
+    UNSPECIFIED = 0;
+    PROVIDED = 1;
+    ASSIGNED = 2;
+  }
+
   RecordMetadata metadata = 1;
 
   string type = 2;
@@ -282,6 +305,7 @@ message JobBatchRecord {
   repeated JobRecord jobs = 7;
   bool truncated = 8;
   repeated string tenantIds = 9;
+  TenantFilter tenantFilter = 10;
 }
 
 message MessageRecord {
@@ -308,6 +332,7 @@ message MessageSubscriptionRecord {
   google.protobuf.Struct variables = 8;
   bool isInterrupting = 9;
   string tenantId = 10;
+  int64 processDefinitionKey = 11;
 }
 
 message MessageStartEventSubscriptionRecord {
@@ -347,6 +372,9 @@ message VariableRecord {
   int64 processDefinitionKey = 6;
   string bpmnProcessId = 7;
   string tenantId = 8;
+  VariableSource source = 9;
+  int64 elementInstanceKey = 10;
+  int64 rootProcessInstanceKey = 11;
 }
 
 message VariableDocumentRecord {
@@ -381,9 +409,19 @@ message ProcessInstanceRecord {
   string bpmnEventType = 11;
   string tenantId = 12;
   repeated string tags = 13;
+  string businessId = 14;
+  repeated LongPath elementInstancePath = 15;
+  repeated int64 processDefinitionPath = 16;
+  int64 rootProcessInstanceKey = 17;
+  repeated int32 callingElementPath = 18;
 }
 
 message ProcessInstanceCreationRecord {
+
+  message ProcessInstanceCreationRuntimeInstruction {
+    string afterElementId = 1;
+    string type = 2;
+  }
 
   message ProcessInstanceCreationStartInstruction {
     string elementId = 1;
@@ -399,6 +437,9 @@ message ProcessInstanceCreationRecord {
   string tenantId = 7;
   repeated ProcessInstanceCreationStartInstruction startInstructions = 8;
   repeated string tags = 9;
+  string businessId = 10;
+  int64 rootProcessInstanceKey = 11;
+  repeated ProcessInstanceCreationRuntimeInstruction runtimeInstructions = 12;
 }
 
 message ProcessMessageSubscriptionRecord {
@@ -414,6 +455,8 @@ message ProcessMessageSubscriptionRecord {
   string correlationKey = 9;
   bool isInterrupting = 10;
   string tenantId = 11;
+  int64 processDefinitionKey = 12;
+  int64 rootProcessInstanceKey = 13;
 }
 
 message ProcessRecord {
@@ -469,6 +512,7 @@ message DecisionRequirementsRecord {
   DecisionRequirementsMetadata decisionRequirementsMetadata = 2;
   bytes resource = 3;
   string tenantId = 4;
+  int64 deploymentKey = 5;
 }
 
 message DecisionEvaluationRecord {
@@ -521,6 +565,7 @@ message DecisionEvaluationRecord {
   string failedDecisionId = 15;
   repeated EvaluatedDecision evaluatedDecisions = 16;
   string tenantId = 17;
+  int64 rootProcessInstanceKey = 18;
 }
 
 message ProcessInstanceModificationRecord {
@@ -541,17 +586,31 @@ message ProcessInstanceModificationRecord {
     string elementId = 2;
   }
 
+  message ProcessInstanceModificationMoveInstruction {
+    int64 sourceElementInstanceKey = 1;
+    int64 ancestorScopeKey = 2;
+    string sourceElementId = 3;
+    string targetElementId = 4;
+    repeated ProcessInstanceModificationVariableInstruction variableInstructions = 5;
+    bool inferAncestorScopeFromSourceHierarchy = 6;
+    bool useSourceParentKeyAsAncestorScopeKey = 7;
+  }
+
   RecordMetadata metadata = 1;
   int64 processInstanceKey = 2;
   repeated ProcessInstanceModificationTerminateInstruction terminateInstructions = 3;
   repeated ProcessInstanceModificationActivateInstruction activateInstructions = 4;
   string tenantId = 5;
+  int64 rootProcessInstanceKey = 6;
+  repeated ProcessInstanceModificationMoveInstruction moveInstructions = 7;
 }
 
 message CheckpointRecord {
   RecordMetadata metadata = 1;
   int64 checkpointId = 2;
   int64 checkpointPosition = 3;
+  int64 firstLogPosition = 4;
+  string checkpointType = 5;
 }
 
 message SignalRecord {
@@ -587,6 +646,10 @@ message ResourceDeletionRecord {
   RecordMetadata metadata = 1;
   int64 resourceKey = 2;
   string tenantId = 3;
+  string resourceId = 4;
+  string batchOperationType = 5;
+  string resourceType = 6;
+  bool isDeleteHistory = 7;
 }
 
 message UserTaskRecord {
@@ -612,6 +675,8 @@ message UserTaskRecord {
   string action = 20;
   int64 creationTimestamp = 21;
   int32 priority = 22;
+  repeated string tags = 23;
+  int64 rootProcessInstanceKey = 24;
 }
 
 message CompensationSubscriptionRecord {
@@ -648,12 +713,12 @@ message ProcessInstanceMigrationRecord {
   int64 processInstanceKey = 2;
   int64 targetProcessDefinitionKey = 3;
   repeated ProcessInstanceMigrationMappingInstruction mappingInstructions = 4;
+  int64 rootProcessInstanceKey = 5;
 
 }
 
 message MessageBatchRecord {
   RecordMetadata metadata = 1;
-  repeated int64 messageKeys = 2;
 }
 
 message ClockRecord {
@@ -687,6 +752,7 @@ message ProcessInstanceResultRecord {
   google.protobuf.Struct variables = 6;
   string tenantId = 7;
   repeated string tags = 8;
+  string businessId = 9;
 }
 
 message ResourceRecord {
@@ -716,10 +782,10 @@ message UserRecord {
 
 message AuthorizationRecord {
   enum AuthorizationOwnerType {
-    _USER = 0;
-    _ROLE = 1;
-    _GROUP = 2;
-    _UNSPECIFIED = 3;
+      _USER = 0;
+      _ROLE = 1;
+      _GROUP = 2;
+      _UNSPECIFIED = 3;
   }
   enum AuthorizationResourceType {
     UNSPECIFIED_RESOURCE_TYPE = 0;
@@ -787,6 +853,7 @@ message AuthorizationRecord {
   string resourceId = 6;
   AuthorizationResourceType resourceType = 7;
   repeated PermissionType permissionTypes = 8;
+  string resourcePropertyName = 9;
 }
 
 message MultiInstanceRecord {
@@ -851,4 +918,85 @@ message IdentitySetupRecord {
   repeated TenantRecord tenantMembers = 6;
   repeated MappingRuleRecord mappingRules = 7;
   repeated AuthorizationRecord authorizations = 8;
+  repeated UserRecord users = 9;
+  repeated GroupRecord groups = 10;
+  repeated TenantRecord tenants = 11;
+  repeated GroupRecord groupMembers = 12;
+}
+
+message HistoryDeletionRecord {
+  RecordMetadata metadata = 1;
+  string decisionDefinitionId = 2;
+  string processId = 3;
+  string resourceType = 4;
+  int64 resourceKey = 5;
+  string tenantId = 6;
+}
+
+message ClusterVariableRecord {
+  RecordMetadata metadata = 1;
+  string name = 2;
+  string value = 3;
+  string scope = 4;
+  string tenantId = 5;
+}
+
+message GlobalListenerRecord {
+  RecordMetadata metadata = 1;
+  int32 priority = 2;
+  string id = 3;
+  string type = 4;
+  string source = 5;
+  int32 retries = 6;
+  repeated string eventTypes = 7;
+  string listenerType = 8;
+  bool isAfterNonGlobal = 9;
+  int64 configKey = 10;
+  int64 globalListenerKey = 11;
+}
+
+message GlobalListenerBatchRecord {
+  RecordMetadata metadata = 1;
+  repeated GlobalListenerRecord listeners = 2;
+  int64 globalListenerBatchKey = 3;
+  repeated int64 createdListenerKeys = 4;
+  repeated int64 updatedListenerKeys = 5;
+  repeated int64 deletedListenerKeys = 6;
+}
+
+message ConditionalEvaluationRecord {
+  message ConditionalStartedProcessInstance {
+    int64 processInstanceKey = 1;
+    int64 processDefinitionKey = 2;
+  }
+
+  RecordMetadata metadata = 1;
+  int64 processDefinitionKey = 2;
+  repeated ConditionalStartedProcessInstance startedProcessInstances = 3;
+  google.protobuf.Struct variables = 4;
+  string tenantId = 5;
+}
+
+message ExpressionRecord {
+  RecordMetadata metadata = 1;
+  repeated string warnings = 2;
+  string expression = 3;
+  string resultValue = 4;
+  string tenantId = 5;
+  google.protobuf.Struct variables = 6;
+}
+
+message ConditionalSubscriptionRecord {
+  RecordMetadata metadata = 1;
+  repeated string variableEvents = 2;
+  string bpmnProcessId = 3;
+  int64 scopeKey = 4;
+  repeated string variableNames = 5;
+  string condition = 6;
+  string catchEventId = 7;
+  bool isInterrupting = 8;
+  int64 processDefinitionKey = 9;
+  int64 elementInstanceKey = 10;
+  int64 processInstanceKey = 11;
+  string tenantId = 12;
 }

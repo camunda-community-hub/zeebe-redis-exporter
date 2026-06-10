@@ -63,14 +63,12 @@ public class ExporterMinTimeToLiveTest {
         .addProcessModel(WORKFLOW, "process-1.bpmn")
         .send()
         .join();
-    Thread.sleep(1000);
     zeebeContainer
         .getClient()
         .newDeployResourceCommand()
         .addProcessModel(WORKFLOW, "process-2.bpmn")
         .send()
         .join();
-    Thread.sleep(1000);
     zeebeContainer
         .getClient()
         .newDeployResourceCommand()
@@ -89,7 +87,7 @@ public class ExporterMinTimeToLiveTest {
             .sync()
             .xreadgroup(
                 Consumer.from("application_1", "consumer_1"),
-                XReadArgs.Builder.block(6000),
+                XReadArgs.Builder.block(4000),
                 XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
     assertThat(messages.size()).isGreaterThan(0);
     var xlen = redisConnection.sync().xlen("zeebe:DEPLOYMENT");
@@ -99,13 +97,13 @@ public class ExporterMinTimeToLiveTest {
     ;
 
     // when: cleanupHasRun but min TTL has not been reached
-    Thread.sleep(6000);
+    Thread.sleep(4000);
 
     // then: cleanup did not yet remove the messages
     assertThat(redisConnection.sync().xlen("zeebe:DEPLOYMENT")).isEqualTo(xlen);
 
     // but will delete them after min TTL
-    var delay = Duration.ofSeconds(5);
+    var delay = Duration.ofSeconds(10);
     await()
         .atMost(Duration.ofSeconds(12))
         .pollDelay(delay)

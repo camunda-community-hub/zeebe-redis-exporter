@@ -150,6 +150,62 @@ namespace Io.Zeebe.Redis.Connect.Csharp
             return this;
         }
 
+        public ZeebeRedis AddHistoryDeletionListener(Action<HistoryDeletionRecord> listener)
+        {
+            var stream = HistoryDeletionRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new HistoryDeletionRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddClusterVariableListener(Action<ClusterVariableRecord> listener)
+        {
+            var stream = ClusterVariableRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ClusterVariableRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddGlobalListener(Action<GlobalListenerRecord> listener)
+        {
+            var stream = GlobalListenerRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new GlobalListenerRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddGlobalListenerBatchListener(Action<GlobalListenerBatchRecord> listener)
+        {
+            var stream = GlobalListenerBatchRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new GlobalListenerBatchRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddConditionalEvaluationListener(Action<ConditionalEvaluationRecord> listener)
+        {
+            var stream = ConditionalEvaluationRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ConditionalEvaluationRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddExpressionListener(Action<ExpressionRecord> listener)
+        {
+            var stream = ExpressionRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ExpressionRecordConsumer(listener));
+            return this;
+        }
+
+        public ZeebeRedis AddConditionalSubscriptionListener(Action<ConditionalSubscriptionRecord> listener)
+        {
+            var stream = ConditionalSubscriptionRecordConsumer.STREAM;
+            _streamPositions.Add(new StreamPosition(stream, ">"));
+            _consumer.Add(stream, new ConditionalSubscriptionRecordConsumer(listener));
+            return this;
+        }
+
         public ZeebeRedis AddIncidentListener(Action<IncidentRecord> listener)
         {
             var stream = IncidentRecordConsumer.STREAM;

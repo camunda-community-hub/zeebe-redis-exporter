@@ -287,6 +287,48 @@ public class RedisConnectionBuilder {
     return this;
   }
 
+  public RedisConnectionBuilder addHistoryDeletionListener(
+      Consumer<Schema.HistoryDeletionRecord> listener) {
+    addListener(ValueType.HISTORY_DELETION.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addClusterVariableListener(
+      Consumer<Schema.ClusterVariableRecord> listener) {
+    addListener(ValueType.CLUSTER_VARIABLE.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addGlobalListener(
+      Consumer<Schema.GlobalListenerRecord> listener) {
+    addListener(ValueType.GLOBAL_LISTENER.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addGlobalListenerBatchListener(
+      Consumer<Schema.GlobalListenerBatchRecord> listener) {
+    addListener(ValueType.GLOBAL_LISTENER_BATCH.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addConditionalEvaluationListener(
+      Consumer<Schema.ConditionalEvaluationRecord> listener) {
+    addListener(ValueType.CONDITIONAL_EVALUATION.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addExpressionListener(
+      Consumer<Schema.ExpressionRecord> listener) {
+    addListener(ValueType.EXPRESSION.name(), listener);
+    return this;
+  }
+
+  public RedisConnectionBuilder addConditionalSubscriptionListener(
+      Consumer<Schema.ConditionalSubscriptionRecord> listener) {
+    addListener(ValueType.CONDITIONAL_SUBSCRIPTION.name(), listener);
+    return this;
+  }
+
   /**
    * Start a background task that reads from Zeebe Streams. <br>
    * Call {@link #close()} to stop reading.
