@@ -299,8 +299,7 @@ public class RedisConnectionBuilder {
     return this;
   }
 
-  public RedisConnectionBuilder addGlobalListener(
-      Consumer<Schema.GlobalListenerRecord> listener) {
+  public RedisConnectionBuilder addGlobalListener(Consumer<Schema.GlobalListenerRecord> listener) {
     addListener(ValueType.GLOBAL_LISTENER.name(), listener);
     return this;
   }
@@ -317,8 +316,7 @@ public class RedisConnectionBuilder {
     return this;
   }
 
-  public RedisConnectionBuilder addExpressionListener(
-      Consumer<Schema.ExpressionRecord> listener) {
+  public RedisConnectionBuilder addExpressionListener(Consumer<Schema.ExpressionRecord> listener) {
     addListener(ValueType.EXPRESSION.name(), listener);
     return this;
   }
