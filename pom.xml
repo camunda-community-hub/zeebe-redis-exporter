@@ -29,10 +29,12 @@
         <version.java>21</version.java>
 
         <!-- release parent settings -->
+        <!--
         <nexus.snapshot.repository>https://artifacts.camunda.com/artifactory/zeebe-io-snapshots/
         </nexus.snapshot.repository>
         <nexus.release.repository>https://artifacts.camunda.com/artifactory/zeebe-io/
         </nexus.release.repository>
+        -->
 
         <!-- disable jdk8 javadoc checks on release build -->
         <additionalparam>-Xdoclint:none</additionalparam>
