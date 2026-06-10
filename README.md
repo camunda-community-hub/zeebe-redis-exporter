@@ -144,7 +144,7 @@ See [connector-csharp/README.md](https://github.com/camunda-community-hub/zeebe-
 A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
-docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.9.7-8.9.0
+docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.9.8-8.9.0
 ```
 
 For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter.
@@ -282,7 +282,7 @@ networks:
 services:
   zeebe:
     container_name: zeebe_broker
-    image: camunda/zeebe:8.9.7
+    image: camunda/zeebe:8.9.8
     environment:
       # Zeebe Redis Exporter configuration:
       - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379

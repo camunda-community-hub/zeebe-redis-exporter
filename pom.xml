@@ -14,7 +14,7 @@
     </parent>
 
     <properties>
-        <version.zeebe>8.9.7</version.zeebe>
+        <version.zeebe>8.9.8</version.zeebe>
         <version.exporter.protobuf>8.9.0</version.exporter.protobuf>
         <version.lettuce>6.8.2.RELEASE</version.lettuce>
         <!-- micrometer version see https://github.com/camunda/camunda/blob/main/parent/pom.xml -->
@@ -29,12 +29,10 @@
         <version.java>21</version.java>
 
         <!-- release parent settings -->
-        <!--
         <nexus.snapshot.repository>https://artifacts.camunda.com/artifactory/zeebe-io-snapshots/
         </nexus.snapshot.repository>
         <nexus.release.repository>https://artifacts.camunda.com/artifactory/zeebe-io/
         </nexus.release.repository>
-        -->
 
         <!-- disable jdk8 javadoc checks on release build -->
         <additionalparam>-Xdoclint:none</additionalparam>
