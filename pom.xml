@@ -29,10 +29,12 @@
         <version.java>21</version.java>
 
         <!-- release parent settings -->
-        <nexus.snapshot.repository>https://artifacts.camunda.com/artifactory/zeebe-io-snapshots/
-        </nexus.snapshot.repository>
-        <nexus.release.repository>https://artifacts.camunda.com/artifactory/zeebe-io/
-        </nexus.release.repository>
+        <nexus.snapshot.repository.id>camunda-nexus</nexus.snapshot.repository.id>
+        <nexus.snapshot.repository>https://artifacts.camunda.com/artifactory/camunda-bpm-community-extensions-snapshots/</nexus.snapshot.repository>
+        <nexus.release.repository.id>camunda-nexus</nexus.release.repository.id>
+        <nexus.release.repository>https://artifacts.camunda.com/artifactory/camunda-bpm-community-extensions/</nexus.release.repository>
+        <nexus.staging.deploy.id>camunda-nexus</nexus.staging.deploy.id>
+        <nexus.staging.deploy.url>https://artifacts.camunda.com/artifactory</nexus.staging.deploy.url>
 
         <!-- disable jdk8 javadoc checks on release build -->
         <additionalparam>-Xdoclint:none</additionalparam>
