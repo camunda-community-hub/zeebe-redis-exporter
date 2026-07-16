@@ -19,7 +19,7 @@
         <version.lettuce>7.6.0.RELEASE</version.lettuce>
         <!-- micrometer version see https://github.com/camunda/camunda/blob/main/parent/pom.xml -->
         <version.micrometer>1.17.0</version.micrometer>
-        <version.log4j>2.26.0</version.log4j>
+        <version.log4j>2.26.1</version.log4j>
         <version.zeebe.testcontainers>3.6.9</version.zeebe.testcontainers>
         <version.junit>6.1.0</version.junit>
         <version.testcontainers>2.0.3</version.testcontainers>
