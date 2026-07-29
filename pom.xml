@@ -24,7 +24,7 @@
         <version.junit>6.1.2</version.junit>
         <version.testcontainers>2.0.3</version.testcontainers>
 
-        <plugin.version.maven-jar>3.5.0</plugin.version.maven-jar>
+        <plugin.version.maven-jar>3.5.1</plugin.version.maven-jar>
         <plugin.version.maven-fmt>2.29</plugin.version.maven-fmt>
         <version.java>21</version.java>
 
