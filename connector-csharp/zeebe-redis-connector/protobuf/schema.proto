@@ -227,6 +227,11 @@ message JobRecord {
     UNSPECIFIED = 0;
     START = 1;
     END = 2;
+    CREATING = 3;
+    ASSIGNING = 4;
+    UPDATING = 5;
+    COMPLETING = 6;
+    CANCELING = 7;
   }
   enum JobResultType {
     _UNSPECIFIED = 0;
@@ -782,10 +787,10 @@ message UserRecord {
 
 message AuthorizationRecord {
   enum AuthorizationOwnerType {
-      _USER = 0;
-      _ROLE = 1;
-      _GROUP = 2;
-      _UNSPECIFIED = 3;
+    _USER = 0;
+    _ROLE = 1;
+    _GROUP = 2;
+    _UNSPECIFIED = 3;
   }
   enum AuthorizationResourceType {
     UNSPECIFIED_RESOURCE_TYPE = 0;

@@ -34,7 +34,7 @@ public class TransferAnbandonedMessagesTest {
   @Container
   public ZeebeTestContainer zeebeContainer =
       ZeebeTestContainer.withCleanupCycleInSeconds(3)
-          .andUseConsumerJobTimeoutInSeconds(5)
+          .andUseConsumerJobTimeoutInSeconds(6)
           .doDeleteAfterAcknowledge(true);
 
   private RedisClient redisClient;
@@ -82,7 +82,7 @@ public class TransferAnbandonedMessagesTest {
             .sync()
             .xreadgroup(
                 Consumer.from("application_42", "consumer_1"),
-                XReadArgs.Builder.block(5000),
+                XReadArgs.Builder.block(3000),
                 XReadArgs.StreamOffset.lastConsumed("zeebe:DEPLOYMENT"));
     assertThat(pendingMessages.size()).isGreaterThan(0);
     // do not xack messages so that they are pending
