@@ -164,10 +164,10 @@
                 </executions>
                 <configuration>
                     <from>
-                        <image>docker.io/camunda/zeebe:${version.zeebe}</image>
+                        <image>docker.io/camunda/camunda:${version.zeebe}</image>
                     </from>
                     <to>
-                        <image>ghcr.io/camunda-community-hub/zeebe-with-redis-exporter</image>
+                        <image>ghcr.io/camunda-community-hub/camunda-with-redis-exporter</image>
                         <tags>
                             <tag>${version.zeebe}-${project.version}</tag>
                             <tag>${version.zeebe}</tag>
@@ -191,7 +191,7 @@
                         <paths>
                             <path>
                                 <from>${project.build.directory}/jib</from>
-                                <into>/usr/local/zeebe/exporters</into>
+                                <into>/usr/local/camunda/exporters</into>
                             </path>
                         </paths>
                     </extraDirectories>

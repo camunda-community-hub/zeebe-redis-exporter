@@ -26,11 +26,11 @@ If you have any suggestions, please let us know - it's a community project.
 
 ## Version compatibility
 
-| Camunda Version | Exporter Version   |
-|-----------------|--------------------|
-| Camunda 8.9     | 8.9.0              |
-| Camunda 8.8     | 3.0.1              |
-| Camunda 8.7     | 2.1.0              |
+| Camunda Version | Exporter Version |
+|-----------------|------------------|
+| Camunda 8.9     | 8.9.2            |
+| Camunda 8.8     | 3.0.1            |
+| Camunda 8.7     | 2.1.0            |
 
 ## Usage
 
@@ -42,7 +42,7 @@ Add the Maven dependency to your `pom.xml`
 <dependency>
 	<groupId>io.zeebe.redis</groupId>
 	<artifactId>zeebe-redis-connector</artifactId>
-	<version>8.9.0</version>
+	<version>8.9.2</version>
 </dependency>
 ```
 
@@ -144,7 +144,7 @@ See [connector-csharp/README.md](https://github.com/camunda-community-hub/zeebe-
 A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
-docker pull ghcr.io/camunda-community-hub/zeebe-with-redis-exporter:8.9.8-8.9.0
+docker pull ghcr.io/camunda-community-hub/camunda-with-redis-exporter:8.9.13-8.9.2
 ```
 
 For a local setup, the repository contains a [docker-compose file](docker/docker-compose.yml). It starts a Zeebe broker with the Redis exporter.
@@ -157,32 +157,32 @@ docker-compose up -d
 
 ### Manual
 
-1. Download the latest [Zeebe distribution](https://github.com/camunda-cloud/zeebe/releases) _(camunda-zeebe-%{VERSION}.tar.gz
+1. Download the latest [Camunda distribution](https://github.com/camunda/camunda/releases) _(camunda-zeebe-%{VERSION}.tar.gz
    )_
 
-1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-8.9.0-jar-with-dependencies.jar_)
+1. Download the latest [exporter JAR](https://github.com/camunda-community-hub/zeebe-redis-exporter/releases) (_zeebe-redis-exporter-8.9.2-jar-with-dependencies.jar_)
 
-1. Copy the exporter JAR  into the broker folder `~/zeebe-broker-%{VERSION}/exporters`.
+1. Copy the exporter JAR  into the broker folder `~/camunda-zeebe-%{VERSION}/exporters`.
 
     ```
-    cp exporter/target/zeebe-redis-exporter-8.9.0-jar-with-dependencies.jar ~/zeebe-broker-%{VERSION}/exporters/
+    cp exporter/target/zeebe-redis-exporter-8.9.2-jar-with-dependencies.jar ~/camunda-zeebe-%{VERSION}/exporters/
     ```
 
-1. Add the exporter to the broker configuration `~/zeebe-broker-%{VERSION}/config/application.yaml`:
+1. Add the exporter to the broker configuration`~/camunda-zeebe-%{VERSION}/config/application.yaml`:
 
     ```
     zeebe:
-      broker:  
+      broker:
         exporters:
           redis:
             className: io.zeebe.redis.exporter.RedisExporter
-            jarPath: exporters/zeebe-redis-exporter-8.9.0-jar-with-dependencies.jar
+            jarPath: exporters/zeebe-redis-exporter-8.9.2-jar-with-dependencies.jar
     ```
 
 1. Set the environment variable `ZEEBE_REDIS_REMOTE_ADDRESS` to your Redis URL.
 
 1. Start the broker
-   `~/zeebe-broker-%{VERSION}/bin/broker`
+   `~/camunda-zeebe-%{VERSION}/bin/broker`
 
 ### Configuration
 
@@ -276,26 +276,33 @@ and not within the more internal `application.yaml` configuration.
 version: "2"
 
 networks:
-  zeebe_network:
+  camunda_network:
     driver: bridge
 
 services:
   zeebe:
-    container_name: zeebe_broker
-    image: camunda/zeebe:8.9.8
+    container_name: camunda_broker
+    image: camunda/camunda:8.9.13
     environment:
+      # Broker only
+      - SPRING_PROFILES_ACTIVE=broker,standalone
+      # Enables the embedded gateway on broker startup.
+      - ZEEBE_BROKER_GATEWAY_ENABLE=true
+      # If you do not want the standard Camunda exporter
+      - CAMUNDA_DATA_SECONDARYSTORAGE_TYPE=none
+      # Security
+      - CAMUNDA_SECURITY_AUTHORIZATIONS_ENABLED=false
+      - CAMUNDA_SECURITY_AUTHENTICATION_UNPROTECTEDAPI=true
       # Zeebe Redis Exporter configuration:
       - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
-      # if you do not want the standard Camunda exporter:
-      - CAMUNDA_DATA_SECONDARYSTORAGE_TYPE=none
     ports:
       - "26500:26500"
       - "9600:9600"
     volumes:
-      - ../exporter/target/zeebe-redis-exporter-8.9.0-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter.jar
-      - ./application.yaml:/usr/local/zeebe/config/application.yaml
+      - ../exporter/target/zeebe-redis-exporter-8.9.2-jar-with-dependencies.jar:/usr/local/camunda/exporters/zeebe-redis-exporter.jar
+      - ./application.yaml:/usr/local/camunda/config/application.yaml
     networks:
-      - zeebe_network
+      - camunda_network
     depends_on:
       - redis
 
@@ -305,7 +312,7 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - zeebe_network
+      - camunda_network
 
 ```      
 

@@ -1,22 +1,26 @@
 networks:
-  zeebe_network:
+  camunda_network:
     driver: bridge
 
 services:
-  zeebe:
-    container_name: zeebe_broker
-    image: camunda/zeebe:8.9.11
+  camunda:
+    container_name: camunda_broker
+    image: camunda/camunda:8.9.13
     environment:
-      - ZEEBE_LOG_LEVEL=debug
-      # disable Camunda exporter - enable and configure when required by your project
-      - CAMUNDA_DATA_SECONDARYSTORAGE_TYPE=none
-      # allow running with low disk space
-      - ZEEBE_BROKER_DATA_DISKUSAGECOMMANDWATERMARK=0.998
-      - ZEEBE_BROKER_DATA_DISKUSAGEREPLICATIONWATERMARK=0.999
-      # security
+      # Broker only
+      - SPRING_PROFILES_ACTIVE=broker,standalone
+      # Enables the embedded gateway on broker startup.
       - ZEEBE_BROKER_GATEWAY_ENABLE=true
+      # Disable standard Camunda exporter
+      - CAMUNDA_DATA_SECONDARYSTORAGE_TYPE=none
+      # Security
       - CAMUNDA_SECURITY_AUTHORIZATIONS_ENABLED=false
       - CAMUNDA_SECURITY_AUTHENTICATION_UNPROTECTEDAPI=true
+      # Allow running with low disk space
+      - ZEEBE_BROKER_DATA_DISKUSAGECOMMANDWATERMARK=0.998
+      - ZEEBE_BROKER_DATA_DISKUSAGEREPLICATIONWATERMARK=0.999
+      # Logging
+      - ZEEBE_LOG_LEVEL=debug
       # Zeebe Redis Settings
       - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
       - ZEEBE_REDIS_TIME_TO_LIVE_IN_SECONDS=900
@@ -24,11 +28,11 @@ services:
       - "26500:26500"
       - "9600:9600"
     volumes:
-      - zeebe:/usr/local/zeebe/data
-      - ../exporter/target/jib/zeebe-redis-exporter-jar-with-dependencies.jar:/usr/local/zeebe/exporters/zeebe-redis-exporter-jar-with-dependencies.jar
-      - ./application.yaml:/usr/local/zeebe/config/application.yaml
+      - camunda:/usr/local/camunda/data
+      - ../exporter/target/jib/zeebe-redis-exporter-jar-with-dependencies.jar:/usr/local/camunda/exporters/zeebe-redis-exporter-jar-with-dependencies.jar
+      - ./application.yaml:/usr/local/camunda/config/application.yaml
     networks:
-      - zeebe_network
+      - camunda_network
     depends_on:
       - redis
 
@@ -38,8 +42,8 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - zeebe_network
+      - camunda_network
 
 volumes:
-  zeebe:
+  camunda:
   elastic:
