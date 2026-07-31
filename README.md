@@ -141,7 +141,7 @@ See [connector-csharp/README.md](https://github.com/camunda-community-hub/zeebe-
 
 ### Docker
 
-A docker image is published to [GitHub Packages](https://github.com/orgs/camunda-community-hub/packages/container/package/zeebe-with-redis-exporter) that is based on the Zeebe image and includes the Redis exporter (the exporter is enabled by default).
+A docker image is published to [GitHub Packages](https://github.com/camunda-community-hub/zeebe-redis-exporter/pkgs/container/camunda-with-redis-exporter) that is based on the unified Camunda image and includes the Redis exporter (the exporter is enabled by default).
 
 ```
 docker pull ghcr.io/camunda-community-hub/camunda-with-redis-exporter:8.9.13-8.9.2
@@ -154,6 +154,57 @@ mvn clean install -DskipTests
 cd docker
 docker-compose up -d
 ```
+
+<details>
+  <summary>Full docker-compose.yml with Redis</summary>
+  <p>
+
+```
+version: "2"
+
+networks:
+  camunda_network:
+    driver: bridge
+
+services:
+  zeebe:
+    container_name: camunda_broker
+    image: camunda/camunda:8.9.13
+    environment:
+      # Broker only
+      - SPRING_PROFILES_ACTIVE=broker,standalone
+      # Enables the embedded gateway on broker startup.
+      - ZEEBE_BROKER_GATEWAY_ENABLE=true
+      # If you do not want the standard Camunda exporter
+      - CAMUNDA_DATA_SECONDARYSTORAGE_TYPE=none
+      # Security
+      - CAMUNDA_SECURITY_AUTHORIZATIONS_ENABLED=false
+      - CAMUNDA_SECURITY_AUTHENTICATION_UNPROTECTEDAPI=true
+      # Zeebe Redis Exporter configuration:
+      - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
+    ports:
+      - "26500:26500"
+      - "9600:9600"
+    volumes:
+      - ../exporter/target/zeebe-redis-exporter-8.9.2-jar-with-dependencies.jar:/usr/local/camunda/exporters/zeebe-redis-exporter.jar
+      - ./application.yaml:/usr/local/camunda/config/application.yaml
+    networks:
+      - camunda_network
+    depends_on:
+      - redis
+
+  redis:
+    container_name: redis_cache
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - camunda_network
+
+```      
+
+</p>
+</details>
 
 ### Manual
 
@@ -267,57 +318,6 @@ The values can be overridden by environment variables with the same name and a `
 
 Especially when it comes to `ZEEBE_REDIS_REMOTE_ADDRESS` it is recommended to define it as environment variable
 and not within the more internal `application.yaml` configuration.
-
-<details>
-  <summary>Full docker-compose.yml with Redis</summary>
-  <p>
-
-```
-version: "2"
-
-networks:
-  camunda_network:
-    driver: bridge
-
-services:
-  zeebe:
-    container_name: camunda_broker
-    image: camunda/camunda:8.9.13
-    environment:
-      # Broker only
-      - SPRING_PROFILES_ACTIVE=broker,standalone
-      # Enables the embedded gateway on broker startup.
-      - ZEEBE_BROKER_GATEWAY_ENABLE=true
-      # If you do not want the standard Camunda exporter
-      - CAMUNDA_DATA_SECONDARYSTORAGE_TYPE=none
-      # Security
-      - CAMUNDA_SECURITY_AUTHORIZATIONS_ENABLED=false
-      - CAMUNDA_SECURITY_AUTHENTICATION_UNPROTECTEDAPI=true
-      # Zeebe Redis Exporter configuration:
-      - ZEEBE_REDIS_REMOTE_ADDRESS=redis://redis:6379
-    ports:
-      - "26500:26500"
-      - "9600:9600"
-    volumes:
-      - ../exporter/target/zeebe-redis-exporter-8.9.2-jar-with-dependencies.jar:/usr/local/camunda/exporters/zeebe-redis-exporter.jar
-      - ./application.yaml:/usr/local/camunda/config/application.yaml
-    networks:
-      - camunda_network
-    depends_on:
-      - redis
-
-  redis:
-    container_name: redis_cache
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    networks:
-      - camunda_network
-
-```      
-
-</p>
-</details>
 
 Check out the Redis documentation on how to [manage](https://redis.io/docs/management/) Redis, configure optional persistence, run in a cluster, etc.
 
